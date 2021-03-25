@@ -62,7 +62,7 @@ Catch <- function( ... ) {
 
 genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, writedat = TRUE, missflag = "9", sourcedir = NULL) {
   if (!is.null(sourcedir)) source(sourcedir)
-  
+  set.seed(NULL)
   proper <- FALSE
   i <- 0    
   while(isFALSE(proper)) { # only generate data with proper number of categories in each variable
