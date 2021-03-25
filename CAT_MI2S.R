@@ -63,8 +63,11 @@ Catch <- function( ... ) {
 genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, writedat = TRUE, missflag = "9", sourcedir = NULL) {
   if (!is.null(sourcedir)) source(sourcedir)
   
-  proper <- FALSE    
+  proper <- FALSE
+  i <- 0    
   while(isFALSE(proper)) { # only generate data with proper number of categories in each variable
+    if(!is.null(seed)) seed <- seed + i
+    i <- i + 1
     dat_all <- genData(nCat, thDist, N, repno, seed)
     
     filename_comp <- genPath(maindir, nCat, thDist, N, repno, 0, createdir = TRUE)
@@ -77,13 +80,14 @@ genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, wr
     
     proper <- all(c(check_comp, check_miss20, check_miss40))
     if (isFALSE(proper)) cat("Regenerate datasets:", basename(filename_comp), "\n")
+    if (i > 20) stop("too many iterations")
   }
   
   if (isTRUE(writedat)) {
     write.table(dat_all$comp, filename_comp, sep = ",", row.names = FALSE, col.names = FALSE)
     write.table(dat_all$miss20, filename_miss20, sep = ",", row.names = FALSE, col.names = FALSE, na = missflag)
     write.table(dat_all$miss40, filename_miss40, sep = ",", row.names = FALSE, col.names = FALSE, na = missflag)
-    output <- c(filename_comp, filename_miss20, filename_miss40, dat_all$seed, proper)
+    output <- c(filename_comp, filename_miss20, filename_miss40, dat_all$seed, proper, i)
   } 
   output
 }
