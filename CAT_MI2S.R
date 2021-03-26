@@ -230,7 +230,7 @@ anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est
   RES
 }
 
-# Model CM1: 3-factor CFA for X, M, Y
+# Model CM1: 3-factor CFA for X, M, Y with 6 items per factor
 CM1 <- '
   X =~ NA*X1 + X2 + X3 + X4 + X5 + X6
   M =~ NA*M1 + M2 + M3 + M4 + M5 + M6
@@ -253,6 +253,25 @@ BM <- '
   X1~~0*X1; X2~~0*X2; X3~~0*X3; X4~~0*X4; X5~~0*X5; X6~~0*X6 
   M1~~0*M1; M2~~0*M2; M3~~0*M3; M4~~0*M4; M5~~0*M5; M6~~0*M6 
   Y1~~0*Y1; Y2~~0*Y2; Y3~~0*Y3; Y4~~0*Y4; Y5~~0*Y5; Y6~~0*Y6'
+
+
+# Model CM2: 3-factor CFA for X, M, Y with 5 items per factor
+CM2 <- '
+  X =~ NA*X1 + X2 + X3 + X4 + X5
+  M =~ NA*M1 + M2 + M3 + M4 + M5
+  Y =~ NA*Y1 + Y2 + Y3 + Y4 + Y5
+  X ~~ 1*X + M + Y
+  M ~~ 1*M + Y
+  Y ~~ 1*Y'
+
+# Model CM3: 3-factor CFA for X, M, Y with 3 items per factor
+CM3 <- '
+  X =~ NA*X1 + X2 + X3 
+  M =~ NA*M1 + M2 + M3 
+  Y =~ NA*Y1 + Y2 + Y3 
+  X ~~ 1*X + M + Y
+  M ~~ 1*M + Y
+  Y ~~ 1*Y'
 
 anaFIML <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est, sourcedir = NULL) {
   if (!is.null(sourcedir)) source(sourcedir)
@@ -626,6 +645,47 @@ fitH1 <- function(lavCor.list, impno, anaModel, estimator, cat_items) {
   RES
 }
 
+anaImp_CM2 <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) {
+  
+  if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
+
+  # Fit H0
+  out_full_path <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss, MI = TRUE, createdir = FALSE) # absolute path 
+  out_full_path <- sub("dat", "out", out_full_path)
+
+  out <- MplusAutomation::readModels(out_full_path)
+  impdat.list <- out$savedata
+  impdat.list <- impdat.list[stringr::str_order(names(impdat.list), numeric = TRUE)] # sort imp1, imp2, .. NOT imp1, imp10, ..
+  
+  cat_items <- c(paste0("X",1:5), paste0("M",1:5), paste0("Y",1:5)) # 5 items per factor
+
+  lavCor.list <- lapply(impdat.list, function(x) {
+    Catch(lavCor(x[,cat_items], ordered=cat_items, output="full", se = "standard", baseline = FALSE))
+  })
+
+  err.list <- lapply(lavCor.list, "[[", "err")
+  warn.list <- lapply(lavCor.list, "[[", "warn")
+  lavCor.list <- lapply(lavCor.list, "[[", "res")
+
+  # Fit H1
+  # Correct model
+  fitH1_CM2_uls_m20   <- fitH1(lavCor.list, impno =  1:20,  anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
+  fitH1_CM2_uls_m50   <- fitH1(lavCor.list, impno = 21:70,  anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
+  fitH1_CM2_uls_m100  <- fitH1(lavCor.list, impno = 71:170, anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
+  fitH1_CM2_uls_m300  <- fitH1(lavCor.list, impno =  1:300, anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
+
+  conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, propMiss = propMiss)
+  
+  # OUTPUT
+  RES <- list(conds          = conds,
+              CM2_uls_m20    = fitH1_CM2_uls_m20,
+              CM2_uls_m50    = fitH1_CM2_uls_m50,
+              CM2_uls_m100   = fitH1_CM2_uls_m100,
+              CM2_uls_m300   = fitH1_CM2_uls_m300,
+              err.list       = err.list,
+              warn.list      = warn.list)
+  RES
+}
 
 
 # pool_ChungCai2019 <- function(pcorr.list, threshold.list, th.idx, acov.list, N) {
