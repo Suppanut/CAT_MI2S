@@ -102,6 +102,93 @@ checkDat <- function(dat, nCat, comp) {
   all(proper)
 }
 
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+#   nItemPerFactor <- 6
+
+#   lambda <- matrix(0, nrow = nItemPerFactor*3, ncol=3)
+#   lambda[1:nItemPerFactor,1] <- factorLoading
+#   lambda[(nItemPerFactor+1):(nItemPerFactor+nItemPerFactor),2] <- factorLoading
+#   lambda[(nItemPerFactor*2+1):(nItemPerFactor*2+nItemPerFactor),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*nItemPerFactor), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor), paste0("Y",1:nItemPerFactor))
+
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#     }
+#   }
+#   catDat <- contDat
+#   for (i in 1:(3*nItemPerFactor)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+#   catDat <- cbind(repno = repno, catDat)
+
+#   # MAR: Chung & Cai (2019)
+#   # Z is based on continuous latent responses, otherwise the proprotion of missing data will be off
+#   Z <- rowMeans(contDat[,c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor))])
+#   quartiles <- c(-Inf, quantile(Z)[2:4], Inf)
+
+#   propMiss20 <- as.numeric(as.character(cut(Z, quartiles, right=FALSE, labels= c(.50, .20, .075, .025) )))
+#   propMiss40 <- as.numeric(as.character(cut(Z, quartiles, right=FALSE, labels= c(1, .40, .15, .05) )))
+  
+#   indMiss20 <- propMiss20 > runif(nrow(catDat), min = 0, max = 1)
+#   indMiss40 <- propMiss40 > runif(nrow(catDat), min = 0, max = 1)
+
+#   # # MAR: Shi et al. (2020)
+#   # # Z is based on continuous latent responses, otherwise the proprotion of missing data will be off
+#   # # first 6 items
+#   # Z <- rowMeans(contDat[,paste0("X",1:nItemPerFactor)]) # based on continuous latent responses
+  
+#   # propMiss20 <- quantile(Z, .20)
+#   # propMiss40 <- quantile(Z, .40)
+
+#   # indMiss20 <- Z < propMiss20
+#   # indMiss40 <- Z < propMiss40
+
+#   catDatMiss20 <- catDatMiss40 <- catDat
+  
+#   catDatMiss20[indMiss20, paste0("Y",1:nItemPerFactor)] <- NA
+#   catDatMiss40[indMiss40, paste0("Y",1:nItemPerFactor)] <- NA
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
+
+
 genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
   set.seed(seedused)
@@ -157,28 +244,15 @@ genData <- function (nCat, thDist, N, repno = 0, seed = NULL) {
     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
   }
   catDat <- cbind(repno = repno, catDat)
-
-  # MAR: Chung & Cai (2019)
-  # Z is based on continuous latent responses, otherwise the proprotion of missing data will be off
-  Z <- rowMeans(contDat[,c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor))])
-  quartiles <- c(-Inf, quantile(Z)[2:4], Inf)
-
-  propMiss20 <- as.numeric(as.character(cut(Z, quartiles, right=FALSE, labels= c(.50, .20, .075, .025) )))
-  propMiss40 <- as.numeric(as.character(cut(Z, quartiles, right=FALSE, labels= c(1, .40, .15, .05) )))
   
+  # MAR
+  Z <- rowSums(catDat[,c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor))])
+  
+  propMiss20 <- sort(rep(c(.50, .20, .075, .025), length.out = N), decreasing = TRUE)[order(order(Z))]
+  propMiss40 <- sort(rep(c(1, .40, .15, .05), length.out = N), decreasing = TRUE)[order(order(Z))]
+
   indMiss20 <- propMiss20 > runif(nrow(catDat), min = 0, max = 1)
   indMiss40 <- propMiss40 > runif(nrow(catDat), min = 0, max = 1)
-
-  # # MAR: Shi et al. (2020)
-  # # Z is based on continuous latent responses, otherwise the proprotion of missing data will be off
-  # # first 6 items
-  # Z <- rowMeans(contDat[,paste0("X",1:nItemPerFactor)]) # based on continuous latent responses
-  
-  # propMiss20 <- quantile(Z, .20)
-  # propMiss40 <- quantile(Z, .40)
-
-  # indMiss20 <- Z < propMiss20
-  # indMiss40 <- Z < propMiss40
 
   catDatMiss20 <- catDatMiss40 <- catDat
   
