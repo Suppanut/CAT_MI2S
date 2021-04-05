@@ -201,6 +201,53 @@ CM3 <- '
   M ~~ 1*M + Y
   Y ~~ 1*Y'
 
+calculateT <- function(fit) {
+  # Browne (1984)
+  # Or see eq. 3.1-3.2 in Chun, Browne, & Shapiro (2018)
+  N <- lavaan::inspect(fit, "nobs")
+  df <- fit@Fit@test$standard$df
+  G <- lavaan::lavTech(fit, "gamma")[[1]]
+  D <- lavaan:::computeDelta(lavmodel = fit@Model)[[1]]
+  e <- matrix(c(residuals(fit)$th, lav_matrix_vech(residuals(fit)$cov, diag = FALSE)), ncol = 1)
+  G.inv <- try(solve(G), silent = TRUE)
+  if ("try-error" %in% class(G.inv)) G.inv <- MASS::ginv(G)
+  U <- try(G.inv - (G.inv %*% D %*% solve(t(D) %*% G.inv %*% D) %*% t(D) %*% G.inv), silent = TRUE)
+  if ("try-error" %in% class(U)) U <- G.inv - (G.inv %*% D %*% MASS::ginv(t(D) %*% G.inv %*% D) %*% t(D) %*% G.inv)
+  # U <- G.inv - (G.inv %*% D %*% MASS::ginv(t(D) %*% G.inv %*% D) %*% t(D) %*% G.inv)
+  TB <- as.numeric(N * (t(e) %*% U %*% e))
+  TYB <- TB/(1+N*TB/(N-1)^2) # (see Yuan & Bentler, 1998, eq. 7)
+
+  # See Savalei & Rhemtulla (2013) & SB1994 & AM2010
+  T <- fit@Fit@test$standard$stat
+  df <- fit@Fit@test$standard$df
+  UG <- lavInspect(fit, "UGamma")
+  UG.tr <- sum(diag(UG))
+  # SB1994
+  c <- df/UG.tr
+  TM <- c * T
+  # AM2010
+  a <- sqrt(df/sum(diag(UG %*% UG)))
+  b <- df - a * UG.tr
+  TMV <- a*T+b
+  output <- c("T" = T, "df" = df, 
+            "TM" = TM, "pvalue.TM" = 1-pchisq(TM,df),
+            "TMV" = TMV, "pvalue.TMV" = 1-pchisq(TMV,df),
+            "TB" = TB, "pvalue.TB" = 1-pchisq(TB,df),
+            "TYB" = TYB, "pvalue.TYB" = 1-pchisq(TYB,df))
+  return(output)
+}
+
+rmsea <- function(T, df, N) {
+  rmsea <- sqrt(max(c(T-df, 0))/(df*(N-1)))
+  c(rmsea = rmsea)
+}
+
+cfitli <- function(T, df, TI, dfI) {
+  cfi <- 1 - max(c(T - df, 0))/max(c(TI - dfI, 0))
+  tli <- 1 - ((T - df) * dfI) / ((TI - dfI) * df)
+  c(cfi = cfi, tli = tli)
+}
+
 ### 1
 genData_Method1 <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
