@@ -10,9 +10,7 @@ genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, wr
     i <- i + 1
     
     genData <- get(paste0("genData_Method", genMethod))
-    missvar <- c(0,0,0,0,0,0, 0,0,0,0,0,0, 1,1,1,1,1,1) # missing in last 6 (Y) out of 18 items
-    missvar <- c(0,0,0,0,0,0, 1,1,1,1,1,1, 1,1,1,1,1,1) # missing MY
-    missvar <- c(0,0,0,1,1,1, 0,0,0,1,1,1, 0,0,0,1,1,1) # missing in last 3 of each factor
+    missvar <- get(paste0("missvar", genMethod))
 
     dat_all <- genData(nCat, thDist, N, repno, seed)
     
@@ -45,6 +43,12 @@ genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, wr
                  iteration = i)
   output
 }
+
+missvar1 <- c(0,0,0,0,0,0, 0,0,0,0,0,0, 1,1,1,1,1,1) # missing in last 6 (Y) out of 18 items
+missvar2 <- c(0,0,0,0,0,0, 0,0,0,0,0,0, 1,1,1,1,1,1) # missing in last 6 (Y) out of 18 items
+missvar3 <- c(0,0,0,0,0,0, 0,0,0,0,0,0, 1,1,1,1,1,1) # missing in last 6 (Y) out of 18 items
+missvar4 <- c(0,0,0,0,0,0, 1,1,1,1,1,1, 1,1,1,1,1,1) # missing in last 6 (Y) out of 18 items
+missvar5 <- c(0,0,0,1,1,1, 0,0,0,1,1,1, 0,0,0,1,1,1) # missing in last 3 of each factor
 
 checkDat <- function(dat = NULL, nCat = NULL, comp = NULL, missvar = NULL) {
   check_nCat <- sapply(lapply(dat, unique), length)[-1] # exclude repno column
