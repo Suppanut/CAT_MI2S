@@ -5,6 +5,19 @@
 ###########################
 
 # General Purpose
+sortParam <- c("X=~X1","X=~X2","X=~X3","X=~X4","X=~X5","X=~X6",
+"M=~M1","M=~M2","M=~M3","M=~M4","M=~M5","M=~M6",
+"Y=~Y1","Y=~Y2","Y=~Y3","Y=~Y4","Y=~Y5","Y=~Y6",
+"X~~M","X~~Y","M~~Y", #"Y~M","M~X",
+"X1|t1","X1|t2","X1|t3","X1|t4","X2|t1","X2|t2","X2|t3","X2|t4",
+"X3|t1","X3|t2","X3|t3","X3|t4","X4|t1","X4|t2","X4|t3","X4|t4",
+"X5|t1","X5|t2","X5|t3","X5|t4","X6|t1","X6|t2","X6|t3","X6|t4",
+"M1|t1","M1|t2","M1|t3","M1|t4","M2|t1","M2|t2","M2|t3","M2|t4",
+"M3|t1","M3|t2","M3|t3","M3|t4","M4|t1","M4|t2","M4|t3","M4|t4",
+"M5|t1","M5|t2","M5|t3","M5|t4","M6|t1","M6|t2","M6|t3","M6|t4",
+"Y1|t1","Y1|t2","Y1|t3","Y1|t4","Y2|t1","Y2|t2","Y2|t3","Y2|t4",
+"Y3|t1","Y3|t2","Y3|t3","Y3|t4","Y4|t1","Y4|t2","Y4|t3","Y4|t4",
+"Y5|t1","Y5|t2","Y5|t3","Y5|t4","Y6|t1","Y6|t2","Y6|t3","Y6|t4")
 
 genPath <- function(maindir, nCat, thDist, N, repno, propMiss, MI = FALSE, check = FALSE, createdir = FALSE) {
   if (is.numeric(nCat)) nCat <- paste0("C", nCat)
@@ -58,49 +71,610 @@ Catch <- function( ... ) {
 }
 
 # Data generation
-
-
 genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, writedat = TRUE, missflag = "9", sourcedir = NULL) {
   if (!is.null(sourcedir)) source(sourcedir)
   set.seed(NULL)
   proper <- FALSE
   i <- 0    
-  while(isFALSE(proper)) { # only generate data with proper number of categories in each variable
+  while(isFALSE(proper)) { # only generate data with proper number of categories
     if(!is.null(seed)) seed <- seed + i
     i <- i + 1
+    # Generate complete and incomplete datasets
     dat_all <- genData(nCat, thDist, N, repno, seed)
     
+    # Generate absolute filepaths to datasets
     filename_comp <- genPath(maindir, nCat, thDist, N, repno, 0, createdir = TRUE)
     filename_miss20 <- genPath(maindir, nCat, thDist, N, repno, 20, createdir = TRUE)
     filename_miss40 <- genPath(maindir, nCat, thDist, N, repno, 40, createdir = TRUE)
     
+    # Check whether the generated datasets are approiate
     check_comp <- checkDat(dat_all$comp, nCat, comp = TRUE)
     check_miss20 <- checkDat(dat_all$miss20, nCat, comp = FALSE)
     check_miss40 <- checkDat(dat_all$miss40, nCat, comp = FALSE)
     
-    proper <- all(c(check_comp, check_miss20, check_miss40))
-    if (isFALSE(proper)) cat("Regenerate datasets:", basename(filename_comp), "\n")
-    if (i > 20) stop("too many iterations")
+    proper <- all(c(check_comp$proper, check_miss20$proper, check_miss40$proper)) # all must be proper
+    if (isFALSE(proper)) cat("Regenerate datasets:", basename(filename_comp), "\n") # if not proper, regenerate the data
+    if (i > 5) stop("too many iterations")
   }
   
+  # Write the data on disk
   if (isTRUE(writedat)) {
     write.table(dat_all$comp, filename_comp, sep = ",", row.names = FALSE, col.names = FALSE)
     write.table(dat_all$miss20, filename_miss20, sep = ",", row.names = FALSE, col.names = FALSE, na = missflag)
     write.table(dat_all$miss40, filename_miss40, sep = ",", row.names = FALSE, col.names = FALSE, na = missflag)
-    output <- c(filename_comp, filename_miss20, filename_miss40, dat_all$seed, proper, i)
   } 
-  output
+
+  # Output
+  output <- list(comp = filename_comp, 
+                 miss20 = filename_miss20, 
+                 miss40 = filename_miss40, 
+                 seed = dat_all$seed, 
+                 proper = proper, 
+                 missrate20 = check_miss20$missrate, 
+                 missrate40 = check_miss40$missrate, 
+                 iteration = i)
+  return(output)
 }
 
-checkDat <- function(dat, nCat, comp) {
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+
+#   lambda <- matrix(0, ncol=3, nrow = 6*3)
+#   lambda[1:6,1] <- factorLoading
+#   lambda[(6+1):(6+6),2] <- factorLoading
+#   lambda[(6*2+1):(6*2+6),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
+
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#       propMiss20 <- c(0, .4)
+#       propMiss40 <- c(0, .8)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#       propMiss20 <- c((20-15)/85, 1)
+#       propMiss40 <- c((40-15)/85, 1)
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#       propMiss20 <- c(0, 0, 0, (20-7)/24, 1)
+#       propMiss40 <- c(0, 0, (40-7-24)/38, 1, 1)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#       propMiss20 <- c(0, 0, 0, 1, 1)
+#       propMiss40 <- c(0, 0.4, 1, 1, 1)
+#     }
+#   }
+  
+#   catDat <- contDat
+#   for (i in 1:(3*6)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+
+#   Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat))
+#   colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
+#   # Items 1-3 predict missingness of items 4-6 for each factor
+#   for (i in c(1:3, 7:9, 13:15)){
+#     Miss20[,i+3] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
+#     Miss40[,i+3] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
+#   }
+#   IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
+#   IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+
+#   catDatMiss20 <- catDatMiss40 <- catDat
+#   catDatMiss20[IndMiss20] <- NA
+#   catDatMiss40[IndMiss40] <- NA
+  
+#   # Add repno
+#   catDat <- cbind(repno = repno, catDat)
+#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
+
+# # missY similar to Liu extreme MAR
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+
+#   lambda <- matrix(0, ncol=3, nrow = 6*3)
+#   lambda[1:6,1] <- factorLoading
+#   lambda[(6+1):(6+6),2] <- factorLoading
+#   lambda[(6*2+1):(6*2+6),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
+
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#       propMiss20 <- c(0, .4)
+#       propMiss40 <- c(0, .8)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#       propMiss20 <- c((20-15)/85, 1)
+#       propMiss40 <- c((40-15)/85, 1)
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#       propMiss20 <- c(0, 0, 0, (20-7)/24, 1)
+#       propMiss40 <- c(0, 0, (40-7-24)/38, 1, 1)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#       propMiss20 <- c(0, 0, 0, 1, 1)
+#       propMiss40 <- c(0, 0.4, 1, 1, 1)
+#     }
+#   }
+  
+#   catDat <- contDat
+#   for (i in 1:(3*6)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+
+#   Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat))
+#   colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
+#   # Items X1-X6 predict missingness of Y1-Y6
+#   for (i in 1:6){
+#     Miss20[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
+#     Miss40[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
+#   }
+#   IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
+#   IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+
+#   catDatMiss20 <- catDatMiss40 <- catDat
+#   catDatMiss20[IndMiss20] <- NA
+#   catDatMiss40[IndMiss40] <- NA
+  
+#   # Add repno
+#   catDat <- cbind(repno = repno, catDat)
+#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
+
+
+# missY similar to Liu extreme MAR head (easier)
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+
+#   lambda <- matrix(0, ncol=3, nrow = 6*3)
+#   lambda[1:6,1] <- factorLoading
+#   lambda[(6+1):(6+6),2] <- factorLoading
+#   lambda[(6*2+1):(6*2+6),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
+
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#       propMiss20 <- c(.4, 0)
+#       propMiss40 <- c(.8, 0)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#       propMiss20 <- c(20/85, 0)
+#       propMiss40 <- c(40/85, 0)
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#       propMiss20 <- c(1, (20-7)/24, 0, 0, 0)
+#       propMiss40 <- c(1, 1, (40-7-24)/38, 0, 0)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#       propMiss20 <- c(20/52, 0, 0, 0, 0)
+#       propMiss40 <- c(40/52, 0, 0, 0, 0)
+#     }
+#   }
+  
+#   catDat <- contDat
+#   for (i in 1:(3*6)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+
+#   Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat))
+#   colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
+#   # Items X1-X6 predict missingness of Y1-Y6
+#   for (i in 1:6){
+#     Miss20[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
+#     Miss40[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
+#   }
+#   IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
+#   IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+
+#   catDatMiss20 <- catDatMiss40 <- catDat
+#   catDatMiss20[IndMiss20] <- NA
+#   catDatMiss40[IndMiss40] <- NA
+  
+#   # Add repno
+#   catDat <- cbind(repno = repno, catDat)
+#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
+
+
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+
+#   lambda <- matrix(0, ncol=3, nrow = 6*3)
+#   lambda[1:6,1] <- factorLoading
+#   lambda[(6+1):(6+6),2] <- factorLoading
+#   lambda[(6*2+1):(6*2+6),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
+
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#       propMiss20 <- c(.4, 0)
+#       propMiss40 <- c(.8, 0)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#       propMiss20 <- c(20/85, 0)
+#       propMiss40 <- c(40/85, 0)
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#       propMiss20 <- c(1, (20-7)/24, 0, 0, 0)
+#       propMiss40 <- c(1, 1, (40-7-24)/38, 0, 0)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#       propMiss20 <- c(20/52, 0, 0, 0, 0)
+#       propMiss40 <- c(40/52, 0, 0, 0, 0)
+#     }
+#   }
+  
+#   catDat <- contDat
+#   for (i in 1:(3*6)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+
+#   Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat))
+#   colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
+#   # Items 1-3 predict missingness of items 4-6 for each factor
+#   for (i in c(1:3, 7:9, 13:15)){
+#     Miss20[,i+3] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
+#     Miss40[,i+3] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
+#   }
+#   IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
+#   IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+
+#   catDatMiss20 <- catDatMiss40 <- catDat
+#   catDatMiss20[IndMiss20] <- NA
+#   catDatMiss40[IndMiss40] <- NA
+  
+#   # Add repno
+#   catDat <- cbind(repno = repno, catDat)
+#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
+
+
+
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+
+#   lambda <- matrix(0, ncol=3, nrow = 6*3)
+#   lambda[1:6,1] <- factorLoading
+#   lambda[(6+1):(6+6),2] <- factorLoading
+#   lambda[(6*2+1):(6*2+6),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
+
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#       propMiss20 <- c(.1, .3)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#       propMiss20 <- c(0.17, 0.37)
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#       propMiss20 <- c(0, 0.1, 0.2, 0.3, 0.4)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#       propMiss20 <- c(0.075, 0.2, 0.3, 0.4, 0.5)
+#     }
+#   }
+#   propMiss40 <- propMiss20*2
+  
+#   catDat <- contDat
+#   for (i in 1:(3*6)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+
+#   Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat))
+#   colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
+#   # Items 1-3 predict missingness of items 4-6 for each factor
+#   for (i in c(1:3, 7:9, 13:15)){
+#     Miss20[,i+3] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
+#     Miss40[,i+3] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
+#   }
+#   IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
+#   IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+
+#   catDatMiss20 <- catDatMiss40 <- catDat
+#   catDatMiss20[IndMiss20] <- NA
+#   catDatMiss40[IndMiss40] <- NA
+  
+#   # Add repno
+#   catDat <- cbind(repno = repno, catDat)
+#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
+
+genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+  if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+  set.seed(seedused)
+  # Conditions
+  nCat <- nCat # Number of categories: C2, C5
+  thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+  N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+  # Factor loadings and factor correlations
+  factorLoading <- 0.8
+  factorCorr <- 0.4
+
+  # Generate observed data on the indicators 
+
+  # Population loading matrix
+  lambda <- matrix(0, ncol=3, nrow = 6*3)
+  lambda[1:6,1] <- factorLoading
+  lambda[(6+1):(6+6),2] <- factorLoading
+  lambda[(6*2+1):(6*2+6),3] <- factorLoading
+
+  # Population factor covariance matrix
+  psi <- matrix(c(1,factorCorr,factorCorr,
+                  factorCorr,1,factorCorr,
+                  factorCorr,factorCorr,1),
+                nrow=3,ncol=3,byrow = TRUE)
+
+  # Population covariance matrix of the latent responses of the ordinal items
+  Sigma <- lambda %*% psi %*% t(lambda)
+  diag(Sigma) <- 1
+    
+  # Generate data on the latent responses
+  contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
+  contDat <- as.data.frame(contDat)
+  colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
+
+  # Specify threshold values and proportion of missing data in each category 
+  if(nCat == 2) {
+    if(thDist == "sym") {
+      p <- c(0, 0.5, 1) # diff(p) = .5, .5
+      Th <- qnorm(p, mean = 0, sd = 1) 
+      propMiss20 <- c(.4, 0) # sum(propMiss20*diff(p)) = .2
+      propMiss40 <- c(.8, 0) # sum(propMiss40*diff(p)) = .4
+    } else if(thDist == "asym") {
+      p <- c(0, 0.85, 1) # diff(p) = .85, .15
+      Th <- qnorm(p, mean = 0, sd = 1) 
+      propMiss20 <- c(20/85, 0) # sum(propMiss20*diff(p)) = .2
+      propMiss40 <- c(40/85, 0) # sum(propMiss40*diff(p)) = .4
+    }
+  } else if(nCat == 5) {
+    if(thDist == "sym") {
+      p <- c(0, 0.07, 0.31, 0.69, 0.93, 1) # diff(p) = .07 .24 .38 .24 .07
+      Th <- qnorm(p, mean = 0, sd = 1)
+      propMiss20 <- c(1, (20-7)/24, 0, 0, 0) # sum(propMiss20*diff(p)) = .2
+      propMiss40 <- c(1, 1, (40-7-24)/38, 0, 0) # sum(propMiss40*diff(p)) = .4
+    } else if(thDist == "asym") {
+      p <- c(0, 0.52, 0.67, 0.80, 0.91, 1) # diff(p) = .52 .15 .13 .11 .09
+      Th <- qnorm(p, mean = 0, sd = 1) 
+      propMiss20 <- c(20/52, 0, 0, 0, 0) # sum(propMiss20*diff(p)) = .2
+      propMiss40 <- c(40/52, 0, 0, 0, 0) # sum(propMiss40*diff(p)) = .4
+    }
+  }
+  
+  # Generate categorical data
+  catDat <- contDat
+  for (i in 1:(3*6)){
+    catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+  }
+
+  # Genderate missing data
+  Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat)) # Templates for generating missing data
+  colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
+  # Items X1-X6 predict missingness of Y1-Y6
+  for (i in 1:6){
+    # Put propMiss to each element in the dataframe
+    Miss20[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
+    Miss40[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
+  }
+  # Indicate where missing values appear
+  IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
+  IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+
+  # Impose NA
+  catDatMiss20 <- catDatMiss40 <- catDat
+  catDatMiss20[IndMiss20] <- NA
+  catDatMiss40[IndMiss40] <- NA
+  
+  # Add repno
+  catDat <- cbind(repno = repno, catDat)
+  catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+  catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+  list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+}
+
+checkDat <- function(dat = NULL, nCat = NULL, comp = NULL, missvar = NULL) {
   check_nCat <- sapply(lapply(dat, unique), length)[-1] # exclude repno column
   if (isTRUE(comp)) {
-    proper <- (check_nCat - nCat) == 0
+    proper <- all((check_nCat - nCat) == 0)
   } else {
-    proper <- (check_nCat - c(rep(nCat, 12), rep(nCat + 1, 6))) == 0 # missisng in last 6 out of 18 items
+    # missvar <- c(0,0,0,0,0,0, 0,0,0,0,0,0, 1,1,1,1,1,1) # missing in last 6 (Y) out of 18 items
+    # missvar <- c(0,0,0,0,0,0, 1,1,1,1,1,1, 1,1,1,1,1,1) # missing MY
+    # missvar <- c(0,0,0,1,1,1, 0,0,0,1,1,1, 0,0,0,1,1,1) # missing in last 3 of each factor
+    proper <- all((check_nCat - rep(nCat, 18) - missvar) == 0)
   }
-  all(proper)
+  missrate <- sapply(lapply(dat, is.na), mean)[-1]
+  list(proper = proper, missrate = missrate)
 }
+
+# checkDat <- function(dat, nCat, comp) {
+#   check_nCat <- sapply(lapply(dat, unique), length)[-1] # exclude repno column
+#   if (isTRUE(comp)) {
+#     proper <- all((check_nCat - nCat) == 0)
+#   } else {
+#     # missvar <- c(0,0,0,0,0,0, 0,0,0,0,0,0, 1,1,1,1,1,1) # missing in last 6 out of 18 items
+#     missvar <- c(0,0,0,1,1,1, 0,0,0,1,1,1, 0,0,0,1,1,1) # missing in last 3 of each factor
+#     proper <- all((check_nCat - rep(nCat, 18) - missvar) == 0)
+#   }
+#   missrate <- sapply(lapply(dat, is.na), mean)[-1]
+#   list(proper = proper, missrate = missrate)
+# }
+
+# checkDat <- function(dat, nCat, comp) {
+#   # missing in MY4-6
+#   check_nCat <- sapply(lapply(dat, unique), length)[-1] # exclude repno column
+#   if (isTRUE(comp)) {
+#     proper <- (check_nCat - nCat) == 0
+#   } else {
+#     proper <- (check_nCat - rep(c(rep(nCat, 3), rep(nCat+1, 3)), 3)) == 0 # missing in items4-6
+#   }
+#   all(proper)
+# }
 
 # genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
 #   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
@@ -188,82 +762,246 @@ checkDat <- function(dat, nCat, comp) {
 #   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
 # }
 
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
 
-genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
-  if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
-  set.seed(seedused)
-  # Conditions
-  nCat <- nCat # Number of categories: C2, C5
-  thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
-  N <- N # Sample size of the observed data: N = 250, 500, 1000
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
 
-  # Factor loadings and factor correlations
-  factorLoading <- 0.8
-  factorCorr <- 0.4
+#   # Generate observed data on the indicators 
 
-  # Generate observed data on the indicators 
+#   # Population loading matrix
+#   nItemPerFactor <- 6
 
-  # Population loading matrix
-  nItemPerFactor <- 6
+#   lambda <- matrix(0, nrow = nItemPerFactor*3, ncol=3)
+#   lambda[1:nItemPerFactor,1] <- factorLoading
+#   lambda[(nItemPerFactor+1):(nItemPerFactor+nItemPerFactor),2] <- factorLoading
+#   lambda[(nItemPerFactor*2+1):(nItemPerFactor*2+nItemPerFactor),3] <- factorLoading
 
-  lambda <- matrix(0, nrow = nItemPerFactor*3, ncol=3)
-  lambda[1:nItemPerFactor,1] <- factorLoading
-  lambda[(nItemPerFactor+1):(nItemPerFactor+nItemPerFactor),2] <- factorLoading
-  lambda[(nItemPerFactor*2+1):(nItemPerFactor*2+nItemPerFactor),3] <- factorLoading
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
 
-  # Population factor covariance matrix
-  psi <- matrix(c(1,factorCorr,factorCorr,
-                  factorCorr,1,factorCorr,
-                  factorCorr,factorCorr,1),
-                nrow=3,ncol=3,byrow = TRUE)
-
-  # Population covariance matrix of the latent responses of the ordinal items
-  Sigma <- lambda %*% psi %*% t(lambda)
-  diag(Sigma) <- 1
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
     
-  # Generate data on the latent responses
-  contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*nItemPerFactor), Sigma = Sigma)
-  contDat <- as.data.frame(contDat)
-  colnames(contDat) <- c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor), paste0("Y",1:nItemPerFactor))
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*nItemPerFactor), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor), paste0("Y",1:nItemPerFactor))
 
-  if(nCat == 2) {
-    if(thDist == "sym") {
-      Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
-    } else if(thDist == "asym") {
-      Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
-    }
-  } else if(nCat == 5) {
-    if(thDist == "sym") {
-      Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
-    } else if(thDist == "asym") {
-      Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
-    }
-  }
-  catDat <- contDat
-  for (i in 1:(3*nItemPerFactor)){
-    catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
-  }
-  catDat <- cbind(repno = repno, catDat)
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#     }
+#   }
+#   catDat <- contDat
+#   for (i in 1:(3*nItemPerFactor)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+#   catDat <- cbind(repno = repno, catDat)
   
-  # MAR
-  Z <- rowSums(catDat[,c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor))])
+#   # MAR
+#   Z <- rowSums(catDat[,c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor))])
   
-  propMiss20 <- sort(rep(c(.50, .20, .075, .025), length.out = N), decreasing = TRUE)[order(order(Z))]
-  propMiss40 <- sort(rep(c(1, .40, .15, .05), length.out = N), decreasing = TRUE)[order(order(Z))]
+#   propMiss20 <- sort(rep(c(.50, .20, .075, .025), length.out = N), decreasing = TRUE)[order(order(Z))]
+#   propMiss40 <- sort(rep(c(1, .40, .15, .05), length.out = N), decreasing = TRUE)[order(order(Z))]
 
-  indMiss20 <- propMiss20 > runif(nrow(catDat), min = 0, max = 1)
-  indMiss40 <- propMiss40 > runif(nrow(catDat), min = 0, max = 1)
+#   indMiss20 <- propMiss20 > runif(nrow(catDat), min = 0, max = 1)
+#   indMiss40 <- propMiss40 > runif(nrow(catDat), min = 0, max = 1)
 
-  catDatMiss20 <- catDatMiss40 <- catDat
+#   catDatMiss20 <- catDatMiss40 <- catDat
   
-  catDatMiss20[indMiss20, paste0("Y",1:nItemPerFactor)] <- NA
-  catDatMiss40[indMiss40, paste0("Y",1:nItemPerFactor)] <- NA
+#   catDatMiss20[indMiss20, paste0("Y",1:nItemPerFactor)] <- NA
+#   catDatMiss40[indMiss40, paste0("Y",1:nItemPerFactor)] <- NA
 
-  list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
-}
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
 
+# # missY similar to Liu
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
 
-anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est, sourcedir = NULL) {
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+
+#   lambda <- matrix(0, ncol=3, nrow = 6*3)
+#   lambda[1:6,1] <- factorLoading
+#   lambda[(6+1):(6+6),2] <- factorLoading
+#   lambda[(6*2+1):(6*2+6),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
+
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#       propMiss20 <- c(.1, .3)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#       propMiss20 <- c(0.17, 0.37)
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#       propMiss20 <- c(0, 0.1, 0.2, 0.3, 0.4)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#       propMiss20 <- c(0.075, 0.2, 0.3, 0.4, 0.5)
+#     }
+#   }
+#   propMiss40 <- propMiss20*2
+  
+#   catDat <- contDat
+#   for (i in 1:(3*6)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+
+#   Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat))
+#   colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
+#   for (i in 1:6){
+#     Miss20[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
+#     Miss40[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
+#   }
+
+#   IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
+#   IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+   
+#   catDatMiss20 <- catDatMiss40 <- catDat
+
+#   catDatMiss20[IndMiss20] <- NA
+#   catDatMiss40[IndMiss40] <- NA
+  
+#   catDat <- cbind(repno = repno, catDat)
+#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
+
+## missMY similar to Liu
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+
+#   lambda <- matrix(0, ncol=3, nrow = 6*3)
+#   lambda[1:6,1] <- factorLoading
+#   lambda[(6+1):(6+6),2] <- factorLoading
+#   lambda[(6*2+1):(6*2+6),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
+
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#       propMiss20 <- c(.1, .3)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#       propMiss20 <- c(0.17, 0.37)
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#       propMiss20 <- c(0, 0.1, 0.2, 0.3, 0.4)
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#       propMiss20 <- c(0.075, 0.2, 0.3, 0.4, 0.5)
+#     }
+#   }
+#   propMiss40 <- propMiss20*2
+  
+#   catDat <- contDat
+#   for (i in 1:(3*6)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+
+#   Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat))
+#   colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
+#   for (i in c(1:3, 7:9, 13:15)){
+#     Miss20[,i+3] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
+#     Miss40[,i+3] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
+#   }
+
+#   IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
+#   IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+   
+#   catDatMiss20 <- catDatMiss40 <- catDat
+
+#   catDatMiss20[IndMiss20] <- NA
+#   catDatMiss40[IndMiss40] <- NA
+  
+#   catDat <- cbind(repno = repno, catDat)
+#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
+
+anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est, complete = TRUE, sourcedir = NULL) {
   if (!is.null(sourcedir)) source(sourcedir)
   
   cat_items <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
@@ -276,32 +1014,71 @@ anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est
   colnames(data) <- c("repno", cat_items)
   
   # Analysis of complete data
-  fit <- Catch(sem(model            = model,
-                   data             = data,
-                   ordered          = cat_items,
-                   std.lv           = TRUE,
-                   parameterization = "delta",
-                   estimator        = est))
-  
-  err_and_warn <- fit[2:3]
+  if (isTRUE(complete)) {
+      fit <- Catch(sem(model            = model,
+                       data             = data,
+                       ordered          = cat_items,
+                       std.lv           = TRUE,
+                       parameterization = "delta",
+                       estimator        = est))
+  } else {
+      fit <- Catch(sem(model            = model,
+                       data             = data,
+                       ordered          = cat_items,
+                       std.lv           = TRUE,
+                       parameterization = "delta",
+                       estimator        = est,
+                       missing          = "pairwise"))
+  }
+
+  # fit is a list: 1) results from sem, 2) error msg, 3) warning msg
+  err_and_warn <- fit[2:3]    
   
   fit <- fit[[1]]
-  param <- try(lavaan::coef(fit), silent = TRUE)
+  est_se <- lav_est_se(fit) # extract lavaan estimates and standard errors
+  param <- est_se$est
+  se - est_se$se
   fitstat <- try(fitMeasures(fit), silent = TRUE)
   teststat <- try(calculateT(fit), silent = TRUE)
-  nobs <- try(inspect(fit, "nobs"))
+  nobs <- inspect(fit, "nobs")
 
   conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, 
              anaModel = anaModel, est = est)
 
-  RES <- list(conds     = conds,
-              param     = param, 
-              fitstat   = fitstat,
-              teststat  = teststat,
-              nobs      = nobs,
-              err       = err_and_warn$err,
-              warn      = err_and_warn$warn)
-  RES
+  output <- list(conds     = conds,
+                 param     = param, 
+                 fitstat   = fitstat,
+                 teststat  = teststat,
+                 nobs      = nobs,
+                 err       = err_and_warn$err,
+                 warn      = err_and_warn$warn)
+  return(output)
+}
+
+# Extract lavaan estimates and standard errors
+# sum(cbind(lav_coef_se(fit, "all")$est,lav_coef_se(fit, "all")$se) - lavaan::parameterEstimates(fit)[,4:5]) # 0
+# all.equal(names(lav_coef_se(fit, "all")$est), apply(lavaan::parameterEstimates(fit)[1:3], 1, paste, collapse="")) # TRUE
+lav_est_se <- function(object, type = "free", add.labels = TRUE) {
+  # Based on lavaan:::lav_object_inspect_coef
+  if (type == "user" || type == "all") {
+      type <- "user"
+      idx <- 1:length(object@ParTable$lhs)
+  }
+  else if (type == "free") {
+      idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
+  }
+  else {
+      stop("lavaan ERROR: argument 'type' must be one of free or user")
+  }
+  EST <- object@Fit@est
+  SE <- object@Fit@se
+  cof <- EST[idx]
+  se <- SE[idx]
+  if (add.labels) {
+      names(cof) <- names(se) <- lavaan:::lav_partable_labels(object@ParTable, type = type)
+  }
+  output <- list(est = cof, se = se)
+  return(output)
 }
 
 # Model CM1: 3-factor CFA for X, M, Y with 6 items per factor
@@ -536,7 +1313,7 @@ runMplusMI <- function(nCat = NULL, thDist = NULL, N = NULL, repno = NULL, propM
   writeLines(syntax, inp_full_path) # write .inp file
 
   # Run Mplus via MplusAutomation (batch mode) 
-  MplusAutomation::runModels(inp_full_path)
+  MplusAutomation::runModels(inp_full_path, logFile = NULL)
 
   # Check PSR
   out_full_path <- sub("\\.inp", "\\.out",inp_full_path) # absolute path to .out 
@@ -597,6 +1374,7 @@ anaImp <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) 
 
   out <- MplusAutomation::readModels(out_full_path)
   impdat.list <- out$savedata
+  if (length(impdat.list) != 300) stop("m is not 300")
   impdat.list <- impdat.list[stringr::str_order(names(impdat.list), numeric = TRUE)] # sort imp1, imp2, .. NOT imp1, imp10, ..
   
   cat_items <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
@@ -761,6 +1539,48 @@ anaImp_CM2 <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NU
   RES
 }
 
+anaImp_CM3 <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) {
+  
+  if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
+
+  # Fit H0
+  out_full_path <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss, MI = TRUE, createdir = FALSE) # absolute path 
+  out_full_path <- sub("dat", "out", out_full_path)
+
+  out <- MplusAutomation::readModels(out_full_path)
+  impdat.list <- out$savedata
+  impdat.list <- impdat.list[stringr::str_order(names(impdat.list), numeric = TRUE)] # sort imp1, imp2, .. NOT imp1, imp10, ..
+  
+  cat_items <- c(paste0("X",1:3), paste0("M",1:3), paste0("Y",1:3)) # 3 items per factor
+
+  lavCor.list <- lapply(impdat.list, function(x) {
+    Catch(lavCor(x[,cat_items], ordered=cat_items, output="full", se = "standard", baseline = FALSE))
+  })
+
+  err.list <- lapply(lavCor.list, "[[", "err")
+  warn.list <- lapply(lavCor.list, "[[", "warn")
+  lavCor.list <- lapply(lavCor.list, "[[", "res")
+
+  # Fit H1
+  # Correct model
+  fitH1_CM3_uls_m20   <- fitH1(lavCor.list, impno =  1:20,  anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
+  fitH1_CM3_uls_m50   <- fitH1(lavCor.list, impno = 21:70,  anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
+  fitH1_CM3_uls_m100  <- fitH1(lavCor.list, impno = 71:170, anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
+  fitH1_CM3_uls_m300  <- fitH1(lavCor.list, impno =  1:300, anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
+
+  conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, propMiss = propMiss)
+  
+  # OUTPUT
+  RES <- list(conds          = conds,
+              CM3_uls_m20    = fitH1_CM3_uls_m20,
+              CM3_uls_m50    = fitH1_CM3_uls_m50,
+              CM3_uls_m100   = fitH1_CM3_uls_m100,
+              CM3_uls_m300   = fitH1_CM3_uls_m300,
+              err.list       = err.list,
+              warn.list      = warn.list)
+  RES
+}
+
 
 # pool_ChungCai2019 <- function(pcorr.list, threshold.list, th.idx, acov.list, N) {
 #   # Chung & Cai (2019, Eqs. 19, 21, 22)
@@ -906,3 +1726,107 @@ cfitli <- function(T, df, TI, dfI) {
   tli <- 1 - ((T - df) * dfI) / ((TI - dfI) * df)
   c(cfi = cfi, tli = tli)
 }
+
+
+## getBias()
+getBias <- function(param.onerow, param.SE.onerow = NULL) {
+  
+  cond <- param.onerow %>% select(-any_of(sortParam)) # nonparam columns 
+  nCat <- param.onerow$nCat
+  thDist <- param.onerow$thDist
+  anaModel <- param.onerow$anaModel
+  nItemPerFactor <- ifelse(anaModel == "CM1", 6, NA)
+  nFactors <- 3
+
+  ## need to be in a one row format
+  ## remove irrelevant columns if any
+  param <- param.onerow[1,!is.na(param.onerow)] %>% select(any_of(sortParam))
+
+  factorLoading <- 0.8 # factor loadings
+  lambda <- rep(factorLoading, nItemPerFactor*nFactors)
+
+  factorCorr <- 0.4 # factor correlations
+  psi <- rep(factorCorr, nFactors*(nFactors-1)/2)
+  
+  # Thresholds
+  if(nCat == 2) {
+    if(thDist == "sym") {
+      Th <- qnorm(c(0.5), mean = 0, sd = 1) # 50%,50%
+    } else if(thDist == "asym") {
+      Th <- qnorm(c(0.85), mean = 0, sd = 1) # 85%,15%
+    }
+  } else if(nCat == 5) {
+    if(thDist == "sym") {
+      Th <- qnorm(c(0.07, 0.31, 0.69, 0.93), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+    } else if(thDist == "asym") {
+      Th <- qnorm(c(0.52, 0.67, 0.80, 0.91), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+    }
+  }
+  thresholds <- rep(Th, nItemPerFactor*nFactors)
+
+  if (isTRUE(length(c(lambda, psi, thresholds)) != length(param))) stop("unequal param length")
+
+  # Population param
+  pop.param <- param
+  pop.param[grep("=~", colnames(pop.param))] <- lambda
+  pop.param[grep("~~", colnames(pop.param))] <- psi
+  pop.param[grep("\\|", colnames(pop.param))] <- thresholds
+
+  # Bias
+  bias <- param-pop.param
+  bias.rel <- bias/pop.param
+  bias.rel[pop.param == 0] <- NA
+
+  bias.std <- NA
+  if(!is.null(param.SE.onerow)) {
+    param.SE <- param.SE.onerow[1,!is.na(param.SE.onerow)] %>% select(any_of(sortParam))
+    bias.std <- bias/param.SE
+    bias.std[param.SE == 0] <- 0
+  }
+
+  list("cond"       = cond,
+       "param"      = param, 
+       "pop.param"  = pop.param, 
+       "bias"       = bias, 
+       "bias.rel"   = bias.rel,
+       "bias.std"   = bias.std) 
+}
+
+extractResults <- function(RES, where) {
+  where <- where
+  cond_temp1 <- as.data.frame(t(sapply(RES, function(x) x$conds)), stringsAsFactors = FALSE)
+  cond_temp2 <- as.data.frame(str_split(where, "_", simplify = TRUE), stringsAsFactors = FALSE) 
+  colnames(cond_temp2) <- c("anaModel","estimator","m")
+  cond_temp2$m <- gsub("m", "",cond_temp2$m)
+  cond <- bind_cols(cond_temp1, cond_temp2)
+  err <- sapply(RES, function(x) ifelse(is.null(x[[where]]$err), 0, 1))
+  warn <- sapply(RES, function(x) ifelse(is.null(x[[where]]$warn), 0, 1))
+
+  teststat <- t(sapply(RES, function(x) x[[where]]$teststat))
+  Full_teststat <- cbind(cond, err, warn, teststat)
+
+  param.list <- lapply(RES, function(x) data.frame(rbind(x[[where]]$param), check.names = FALSE))
+  Full_param <- data.table::rbindlist(param.list, fill = TRUE, use.names=TRUE) %>% relocate(any_of(sortParam))
+  Full_param <- cbind(cond, err, warn, Full_param)
+
+  list(Full_param = Full_param, Full_teststat = Full_teststat)
+}
+
+## abs_max() is used to find max(|x|) and its corresponding name
+abs_max <- function(x) { 
+    if( all(is.na(x)) ) {
+       abs_max <- NA
+       which_max <- NA
+    } else {
+       abs_max <- max(abs(x), na.rm = TRUE)
+       which_max <- names(which.max(abs(x))) 
+    }
+    data.frame(max = abs_max, which_max = which_max)
+}
+
+## A list containing functions (written in tidy-style), mean var min max nReps
+getMeanVarMinMaxN <- list(mean = ~mean(.x, na.rm = TRUE),
+                          var  = ~var(.x, na.rm = TRUE),
+                          min  = ~min(.x, na.rm = TRUE),
+                          max  = ~max(.x, na.rm = TRUE),
+                          nReps = ~sum(!is.na(.x)))
