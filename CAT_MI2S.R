@@ -1001,7 +1001,7 @@ checkDat <- function(dat = NULL, nCat = NULL, comp = NULL, missvar = NULL) {
 #   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
 # }
 
-anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est, complete = TRUE, sourcedir = NULL) {
+anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est, sourcedir = NULL) {
   if (!is.null(sourcedir)) source(sourcedir)
   
   cat_items <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
@@ -1014,7 +1014,7 @@ anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est
   colnames(data) <- c("repno", cat_items)
   
   # Analysis of complete data
-  if (isTRUE(complete)) {
+  if (isTRUE(propMiss == 0)) {
       fit <- Catch(sem(model            = model,
                        data             = data,
                        ordered          = cat_items,
