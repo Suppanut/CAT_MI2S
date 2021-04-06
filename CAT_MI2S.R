@@ -1037,7 +1037,7 @@ anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est
   fit <- fit[[1]]
   est_se <- lav_est_se(fit) # extract lavaan estimates and standard errors
   param <- est_se$est
-  se - est_se$se
+  se <- est_se$se
   fitstat <- try(fitMeasures(fit), silent = TRUE)
   teststat <- try(calculateT(fit), silent = TRUE)
   nobs <- inspect(fit, "nobs")
@@ -1046,7 +1046,8 @@ anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est
              anaModel = anaModel, est = est)
 
   output <- list(conds     = conds,
-                 param     = param, 
+                 param     = param,
+                 se        = se,
                  fitstat   = fitstat,
                  teststat  = teststat,
                  nobs      = nobs,
