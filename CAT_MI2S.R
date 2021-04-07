@@ -1425,34 +1425,34 @@ anaImp <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) 
   conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, propMiss = propMiss)
   
   # OUTPUT
-  RES <- list(conds          = conds,
-              CM1_dwls_m20   = fitH1_CM1_dwls_m20,
-              CM1_dwls_m50   = fitH1_CM1_dwls_m50,
-              CM1_dwls_m100  = fitH1_CM1_dwls_m100,
-              CM1_dwls_m300  = fitH1_CM1_dwls_m300,
-              CM1_uls_m20    = fitH1_CM1_uls_m20,
-              CM1_uls_m50    = fitH1_CM1_uls_m50,
-              CM1_uls_m100   = fitH1_CM1_uls_m100,
-              CM1_uls_m300   = fitH1_CM1_uls_m300,
-              ICM1_dwls_m20  = fitH1_ICM1_dwls_m20,
-              ICM1_dwls_m50  = fitH1_ICM1_dwls_m50,
-              ICM1_dwls_m100 = fitH1_ICM1_dwls_m100,
-              ICM1_dwls_m300 = fitH1_ICM1_dwls_m300,
-              ICM1_uls_m20   = fitH1_ICM1_uls_m20,
-              ICM1_uls_m50   = fitH1_ICM1_uls_m50,
-              ICM1_uls_m100  = fitH1_ICM1_uls_m100,
-              ICM1_uls_m300  = fitH1_ICM1_uls_m300,
-              BM_dwls_m20    = fitH1_BM_dwls_m20,
-              BM_dwls_m50    = fitH1_BM_dwls_m50,
-              BM_dwls_m100   = fitH1_BM_dwls_m100,
-              BM_dwls_m300   = fitH1_BM_dwls_m300,
-              BM_uls_m20     = fitH1_BM_uls_m20,
-              BM_uls_m50     = fitH1_BM_uls_m50,
-              BM_uls_m100    = fitH1_BM_uls_m100,
-              BM_uls_m300    = fitH1_BM_uls_m300,
-              err.list       = err.list,
-              warn.list      = warn.list)
-  RES
+  output <- list(conds          = conds,
+                 CM1_dwls_m20   = fitH1_CM1_dwls_m20,
+                 CM1_dwls_m50   = fitH1_CM1_dwls_m50,
+                 CM1_dwls_m100  = fitH1_CM1_dwls_m100,
+                 CM1_dwls_m300  = fitH1_CM1_dwls_m300,
+                 CM1_uls_m20    = fitH1_CM1_uls_m20,
+                 CM1_uls_m50    = fitH1_CM1_uls_m50,
+                 CM1_uls_m100   = fitH1_CM1_uls_m100,
+                 CM1_uls_m300   = fitH1_CM1_uls_m300,
+                 ICM1_dwls_m20  = fitH1_ICM1_dwls_m20,
+                 ICM1_dwls_m50  = fitH1_ICM1_dwls_m50,
+                 ICM1_dwls_m100 = fitH1_ICM1_dwls_m100,
+                 ICM1_dwls_m300 = fitH1_ICM1_dwls_m300,
+                 ICM1_uls_m20   = fitH1_ICM1_uls_m20,
+                 ICM1_uls_m50   = fitH1_ICM1_uls_m50,
+                 ICM1_uls_m100  = fitH1_ICM1_uls_m100,
+                 ICM1_uls_m300  = fitH1_ICM1_uls_m300,
+                 BM_dwls_m20    = fitH1_BM_dwls_m20,
+                 BM_dwls_m50    = fitH1_BM_dwls_m50,
+                 BM_dwls_m100   = fitH1_BM_dwls_m100,
+                 BM_dwls_m300   = fitH1_BM_dwls_m300,
+                 BM_uls_m20     = fitH1_BM_uls_m20,
+                 BM_uls_m50     = fitH1_BM_uls_m50,
+                 BM_uls_m100    = fitH1_BM_uls_m100,
+                 BM_uls_m300    = fitH1_BM_uls_m300,
+                 err.list       = err.list,
+                 warn.list      = warn.list)
+  return(output)
 }
 
 fitH1 <- function(lavCor.list, impno, anaModel, estimator, cat_items) {
@@ -1485,17 +1485,20 @@ fitH1 <- function(lavCor.list, impno, anaModel, estimator, cat_items) {
   err_and_warn <- fit[2:3]
   
   fit <- fit[[1]]
-  param <- try(lavaan::coef(fit), silent = TRUE)
+  est_se <- lav_est_se(fit) # extract lavaan estimates and standard errors
+  param <- est_se$est
+  se <- est_se$se
   fitstat <- try(fitMeasures(fit), silent = TRUE)
   teststat <- try(calculateT(fit), silent = TRUE)
 
-  RES <- list(param     = param, 
-              fitstat   = fitstat,
-              teststat  = teststat,
-              err       = err_and_warn$err,
-              warn      = err_and_warn$warn)
+  output <- list(param     = param, 
+                 se        = se,
+                 fitstat   = fitstat,
+                 teststat  = teststat,
+                 err       = err_and_warn$err,
+                 warn      = err_and_warn$warn)
   # OUTPUT
-  RES
+  return(output)
 }
 
 anaImp_CM2 <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) {
