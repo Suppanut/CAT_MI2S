@@ -544,6 +544,100 @@ genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, wr
 #   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
 # }
 
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+#   lambda <- matrix(0, ncol=3, nrow = 6*3)
+#   lambda[1:6,1] <- factorLoading
+#   lambda[(6+1):(6+6),2] <- factorLoading
+#   lambda[(6*2+1):(6*2+6),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
+
+#   # Specify threshold values and proportion of missing data in each category 
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       p <- c(0, 0.5, 1) # diff(p) = .5, .5
+#       Th <- qnorm(p, mean = 0, sd = 1) 
+#       propMiss20 <- c(.4, 0) # sum(propMiss20*diff(p)) = .2
+#       propMiss40 <- c(.8, 0) # sum(propMiss40*diff(p)) = .4
+#     } else if(thDist == "asym") {
+#       p <- c(0, 0.85, 1) # diff(p) = .85, .15
+#       Th <- qnorm(p, mean = 0, sd = 1) 
+#       propMiss20 <- c(20/85, 0) # sum(propMiss20*diff(p)) = .2
+#       propMiss40 <- c(40/85, 0) # sum(propMiss40*diff(p)) = .4
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       p <- c(0, 0.07, 0.31, 0.69, 0.93, 1) # diff(p) = .07 .24 .38 .24 .07
+#       Th <- qnorm(p, mean = 0, sd = 1)
+#       propMiss20 <- c(1, (20-7)/24, 0, 0, 0) # sum(propMiss20*diff(p)) = .2
+#       propMiss40 <- c(1, 1, (40-7-24)/38, 0, 0) # sum(propMiss40*diff(p)) = .4
+#     } else if(thDist == "asym") {
+#       p <- c(0, 0.52, 0.67, 0.80, 0.91, 1) # diff(p) = .52 .15 .13 .11 .09
+#       Th <- qnorm(p, mean = 0, sd = 1) 
+#       propMiss20 <- c(20/52, 0, 0, 0, 0) # sum(propMiss20*diff(p)) = .2
+#       propMiss40 <- c(40/52, 0, 0, 0, 0) # sum(propMiss40*diff(p)) = .4
+#     }
+#   }
+  
+#   # Generate categorical data
+#   catDat <- contDat
+#   for (i in 1:(3*6)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+
+#   # Genderate missing data
+#   Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat)) # Templates for generating missing data
+#   colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
+#   # Items X1-X6 predict missingness of Y1-Y6
+#   for (i in 1:6){
+#     # Put propMiss to each element in the dataframe
+#     Miss20[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
+#     Miss40[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
+#   }
+#   # Indicate where missing values appear
+#   IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
+#   IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+
+#   # Impose NA
+#   catDatMiss20 <- catDatMiss40 <- catDat
+#   catDatMiss20[IndMiss20] <- NA
+#   catDatMiss40[IndMiss40] <- NA
+  
+#   # Add repno
+#   catDat <- cbind(repno = repno, catDat)
+#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
+
 genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
   set.seed(seedused)
@@ -579,56 +673,51 @@ genData <- function (nCat, thDist, N, repno = 0, seed = NULL) {
   contDat <- as.data.frame(contDat)
   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
 
-  # Specify threshold values and proportion of missing data in each category 
+  # Specify threshold values and proportion of missing data 
   if(nCat == 2) {
     if(thDist == "sym") {
       p <- c(0, 0.5, 1) # diff(p) = .5, .5
       Th <- qnorm(p, mean = 0, sd = 1) 
-      propMiss20 <- c(.4, 0) # sum(propMiss20*diff(p)) = .2
-      propMiss40 <- c(.8, 0) # sum(propMiss40*diff(p)) = .4
+      Z_propMiss20 <- c(0.5, 0.4, 0, 0)
     } else if(thDist == "asym") {
       p <- c(0, 0.85, 1) # diff(p) = .85, .15
       Th <- qnorm(p, mean = 0, sd = 1) 
-      propMiss20 <- c(20/85, 0) # sum(propMiss20*diff(p)) = .2
-      propMiss40 <- c(40/85, 0) # sum(propMiss40*diff(p)) = .4
+      Z_propMiss20 <- c(0.278, 0, 0, 0)
     }
+    Z_breaks <- c(0, 3, 6, 9, 12)
   } else if(nCat == 5) {
     if(thDist == "sym") {
       p <- c(0, 0.07, 0.31, 0.69, 0.93, 1) # diff(p) = .07 .24 .38 .24 .07
       Th <- qnorm(p, mean = 0, sd = 1)
-      propMiss20 <- c(1, (20-7)/24, 0, 0, 0) # sum(propMiss20*diff(p)) = .2
-      propMiss40 <- c(1, 1, (40-7-24)/38, 0, 0) # sum(propMiss40*diff(p)) = .4
+      Z_propMiss20 <- c(0.5, 0.407, 0, 0)
     } else if(thDist == "asym") {
       p <- c(0, 0.52, 0.67, 0.80, 0.91, 1) # diff(p) = .52 .15 .13 .11 .09
       Th <- qnorm(p, mean = 0, sd = 1) 
-      propMiss20 <- c(20/52, 0, 0, 0, 0) # sum(propMiss20*diff(p)) = .2
-      propMiss40 <- c(40/52, 0, 0, 0, 0) # sum(propMiss40*diff(p)) = .4
+      Z_propMiss20 <- c(0.389, 0, 0, 0)
     }
+    Z_breaks <- c(0, 12, 24, 36, 48)
   }
+  Z_propMiss40 <- Z_propMiss20*2
   
   # Generate categorical data
   catDat <- contDat
   for (i in 1:(3*6)){
     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
   }
-
-  # Genderate missing data
-  Miss20 <- Miss40 <- matrix(0, nrow = N, ncol = ncol(catDat)) # Templates for generating missing data
-  colnames(Miss20) <- colnames(Miss40) <- colnames(catDat)
-  # Items X1-X6 predict missingness of Y1-Y6
-  for (i in 1:6){
-    # Put propMiss to each element in the dataframe
-    Miss20[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss20)))
-    Miss40[,i+12] <- as.numeric(as.character(factor(catDat[,i], levels = 0:(nCat-1), labels = propMiss40)))
-  }
-  # Indicate where missing values appear
-  IndMiss20 <- Miss20 > runif(max = 1, min = 0, n = ncol(Miss20)*N)
-  IndMiss40 <- Miss40 > runif(max = 1, min = 0, n = ncol(Miss40)*N)
+  
+  # Generate missing data
+  Z <- rowSums(catDat[,c(paste0("X",1:6), paste0("M",1:6))])
+  
+  propMiss20 <- as.numeric(as.character(cut(Z, breaks = Z_breaks, labels = Z_propMiss20, right=FALSE, include.lowest=TRUE )))
+  propMiss40 <- as.numeric(as.character(cut(Z, breaks = Z_breaks, labels = Z_propMiss40, right=FALSE, include.lowest=TRUE )))
+  
+  indMiss20 <- propMiss20 > runif(nrow(catDat), min = 0, max = 1)
+  indMiss40 <- propMiss40 > runif(nrow(catDat), min = 0, max = 1)
 
   # Impose NA
   catDatMiss20 <- catDatMiss40 <- catDat
-  catDatMiss20[IndMiss20] <- NA
-  catDatMiss40[IndMiss40] <- NA
+  catDatMiss20[indMiss20, paste0("Y",1:6)] <- NA
+  catDatMiss40[indMiss40, paste0("Y",1:6)] <- NA
   
   # Add repno
   catDat <- cbind(repno = repno, catDat)
@@ -1042,7 +1131,7 @@ anaComp <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est
   teststat <- try(calculateT(fit), silent = TRUE)
   nobs <- inspect(fit, "nobs")
 
-  conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, 
+  conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, propMiss = propMiss,
              anaModel = anaModel, est = est)
 
   output <- list(conds     = conds,
@@ -1803,6 +1892,7 @@ extractResults <- function(RES, where) {
   colnames(cond_temp2) <- c("anaModel","estimator","m")
   cond_temp2$m <- gsub("m", "",cond_temp2$m)
   cond <- bind_cols(cond_temp1, cond_temp2)
+  cond <- mutate(cond, across(c(nCat,N,repno,propMiss,m), as.numeric))
   err <- sapply(RES, function(x) ifelse(is.null(x[[where]]$err), 0, 1))
   warn <- sapply(RES, function(x) ifelse(is.null(x[[where]]$warn), 0, 1))
 
