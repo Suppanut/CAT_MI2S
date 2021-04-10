@@ -792,8 +792,8 @@ genData <- function (nCat, thDist, N, repno = 0, seed = NULL) {
   Z.quartile <- c(-Inf, quantile(Z, probs = c(.25, .5, .75)), Inf)
 
   # Note. Given discrete data, right=TRUE will lead to more missing data, whereas FALSE will lead to less missing data 
-  propMiss20 <- as.numeric(as.character(cut(Z, Z.quartile, right=sample(c(TRUE,FALSE), size = 1, prob = c(.51,.49)), labels= c(.50, .20, .075, .025) )))
-  propMiss40 <- as.numeric(as.character(cut(Z, Z.quartile, right=sample(c(TRUE,FALSE), size = 1, prob = c(.51,.49)), labels= c(1, .40, .15, .05) )))
+  propMiss20 <- as.numeric(as.character(cut(Z, Z.quartile, right=sample(c(TRUE,FALSE), size = 1, prob = c(.52,.48)), labels= c(.50, .20, .075, .025) )))
+  propMiss40 <- as.numeric(as.character(cut(Z, Z.quartile, right=sample(c(TRUE,FALSE), size = 1, prob = c(.52,.48)), labels= c(1, .40, .15, .05) )))
   
   indMiss20 <- propMiss20 > runif(nrow(catDat), min = 0, max = 1)
   indMiss40 <- propMiss40 > runif(nrow(catDat), min = 0, max = 1)
