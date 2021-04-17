@@ -280,11 +280,12 @@ genData <- function (nCat, thDist, N, repno = 0, seed = NULL) {
   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
 
-  # Some correlations
-  missimpact <- round(cor(cbind(data.frame(Z, Z.rank, indPropMiss20, indMiss20, indMiss40), 
-                          catDat[,paste0("Y",1:nItemPerFactor)])), 2)[,1:5]
+  # # Some correlations
+  # missimpact <- round(cor(cbind(data.frame(Z, Z.rank, indPropMiss20, indMiss20, indMiss40), 
+  #                         catDat[,paste0("Y",1:nItemPerFactor)])), 2)[,1:5]
+  # print(missimpact)
 
-  list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, missimpact = missimpact, seed = seedused)
+  list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
 }
 
 checkDat <- function(dat = NULL, nCat = NULL, comp = NULL, missvar = NULL) {
