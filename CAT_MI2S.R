@@ -71,50 +71,50 @@ Catch <- function( ... ) {
 }
 
 # Data generation
-# genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, writedat = TRUE, missflag = "9", sourcedir = NULL) {
-#   if (!is.null(sourcedir)) source(sourcedir)
-#   set.seed(NULL)
-#   proper <- FALSE
-#   i <- 0    
-#   while(isFALSE(proper)) { # only generate data with proper number of categories
-#     if(!is.null(seed)) seed <- seed + i
-#     i <- i + 1
-#     # Generate complete and incomplete datasets
-#     dat_all <- genData(nCat, thDist, N, repno, seed)
+genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, writedat = TRUE, missflag = "9", sourcedir = NULL) {
+  if (!is.null(sourcedir)) source(sourcedir)
+  set.seed(NULL)
+  proper <- FALSE
+  i <- 0    
+  while(isFALSE(proper)) { # only generate data with proper number of categories
+    if(!is.null(seed)) seed <- seed + i
+    i <- i + 1
+    # Generate complete and incomplete datasets
+    dat_all <- genData(nCat, thDist, N, repno, seed)
     
-#     # Generate absolute filepaths to datasets
-#     filename_comp <- genPath(maindir, nCat, thDist, N, repno, 0, createdir = TRUE)
-#     filename_miss20 <- genPath(maindir, nCat, thDist, N, repno, 20, createdir = TRUE)
-#     filename_miss40 <- genPath(maindir, nCat, thDist, N, repno, 40, createdir = TRUE)
+    # Generate absolute filepaths to datasets
+    filename_comp <- genPath(maindir, nCat, thDist, N, repno, 0, createdir = TRUE)
+    filename_miss20 <- genPath(maindir, nCat, thDist, N, repno, 20, createdir = TRUE)
+    filename_miss40 <- genPath(maindir, nCat, thDist, N, repno, 40, createdir = TRUE)
     
-#     # Check whether the generated datasets are approiate
-#     check_comp <- checkDat(dat_all$comp, nCat, comp = TRUE)
-#     check_miss20 <- checkDat(dat_all$miss20, nCat, comp = FALSE)
-#     check_miss40 <- checkDat(dat_all$miss40, nCat, comp = FALSE)
+    # Check whether the generated datasets are approiate
+    check_comp <- checkDat(dat_all$comp, nCat, comp = TRUE)
+    check_miss20 <- checkDat(dat_all$miss20, nCat, comp = FALSE)
+    check_miss40 <- checkDat(dat_all$miss40, nCat, comp = FALSE)
     
-#     proper <- all(c(check_comp$proper, check_miss20$proper, check_miss40$proper)) # all must be proper
-#     if (isFALSE(proper)) cat("Regenerate datasets:", basename(filename_comp), "\n") # if not proper, regenerate the data
-#     if (i > 5) stop("too many iterations")
-#   }
+    proper <- all(c(check_comp$proper, check_miss20$proper, check_miss40$proper)) # all must be proper
+    if (isFALSE(proper)) cat("Regenerate datasets:", basename(filename_comp), "\n") # if not proper, regenerate the data
+    if (i > 5) stop("too many iterations")
+  }
   
-#   # Write the data on disk
-#   if (isTRUE(writedat)) {
-#     write.table(dat_all$comp, filename_comp, sep = ",", row.names = FALSE, col.names = FALSE)
-#     write.table(dat_all$miss20, filename_miss20, sep = ",", row.names = FALSE, col.names = FALSE, na = missflag)
-#     write.table(dat_all$miss40, filename_miss40, sep = ",", row.names = FALSE, col.names = FALSE, na = missflag)
-#   } 
+  # Write the data on disk
+  if (isTRUE(writedat)) {
+    write.table(dat_all$comp, filename_comp, sep = ",", row.names = FALSE, col.names = FALSE)
+    write.table(dat_all$miss20, filename_miss20, sep = ",", row.names = FALSE, col.names = FALSE, na = missflag)
+    write.table(dat_all$miss40, filename_miss40, sep = ",", row.names = FALSE, col.names = FALSE, na = missflag)
+  } 
 
-#   # Output
-#   output <- list(comp = filename_comp, 
-#                  miss20 = filename_miss20, 
-#                  miss40 = filename_miss40, 
-#                  seed = dat_all$seed, 
-#                  proper = proper, 
-#                  missrate20 = check_miss20$missrate, 
-#                  missrate40 = check_miss40$missrate, 
-#                  iteration = i)
-#   return(output)
-# }
+  # Output
+  output <- list(comp = filename_comp, 
+                 miss20 = filename_miss20, 
+                 miss40 = filename_miss40, 
+                 seed = dat_all$seed, 
+                 proper = proper, 
+                 missrate20 = check_miss20$missrate, 
+                 missrate40 = check_miss40$missrate, 
+                 iteration = i)
+  return(output)
+}
 
 # # MAR: Shi et al. (2020)
 # genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
