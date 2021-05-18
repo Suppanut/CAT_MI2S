@@ -116,85 +116,7 @@ genData_check_write <- function(maindir, nCat, thDist, N, repno, seed = NULL, wr
   return(output)
 }
 
-# # MAR: Shi et al. (2020)
-# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
-#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
-#   set.seed(seedused)
-#   # Conditions
-#   nCat <- nCat # Number of categories: C2, C5
-#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
-#   N <- N # Sample size of the observed data: N = 250, 500, 1000
-
-#   # Factor loadings and factor correlations
-#   factorLoading <- 0.8
-#   factorCorr <- 0.4
-
-#   # Generate observed data on the indicators 
-
-#   # Population loading matrix
-#   lambda <- matrix(0, ncol=3, nrow = 6*3)
-#   lambda[1:6,1] <- factorLoading
-#   lambda[(6+1):(6+6),2] <- factorLoading
-#   lambda[(6*2+1):(6*2+6),3] <- factorLoading
-
-#   # Population factor covariance matrix
-#   psi <- matrix(c(1,factorCorr,factorCorr,
-#                   factorCorr,1,factorCorr,
-#                   factorCorr,factorCorr,1),
-#                 nrow=3,ncol=3,byrow = TRUE)
-
-#   # Population covariance matrix of the latent responses of the ordinal items
-#   Sigma <- lambda %*% psi %*% t(lambda)
-#   diag(Sigma) <- 1
-    
-#   # Generate data on the latent responses
-#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
-#   contDat <- as.data.frame(contDat)
-#   colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
-
-#   # Specify threshold values and proportion of missing data 
-#   if(nCat == 2) {
-#     if(thDist == "sym") {
-#       p <- c(0, 0.5, 1) # diff(p) = .5, .5
-#       Th <- qnorm(p, mean = 0, sd = 1) 
-#     } else if(thDist == "asym") {
-#       p <- c(0, 0.85, 1) # diff(p) = .85, .15
-#       Th <- qnorm(p, mean = 0, sd = 1) 
-#     }
-#   } else if(nCat == 5) {
-#     if(thDist == "sym") {
-#       p <- c(0, 0.07, 0.31, 0.69, 0.93, 1) # diff(p) = .07 .24 .38 .24 .07
-#       Th <- qnorm(p, mean = 0, sd = 1)
-#     } else if(thDist == "asym") {
-#       p <- c(0, 0.52, 0.67, 0.80, 0.91, 1) # diff(p) = .52 .15 .13 .11 .09
-#       Th <- qnorm(p, mean = 0, sd = 1) 
-#     }
-#   }
-  
-#   # Generate categorical data
-#   catDat <- contDat
-#   for (i in 1:18){
-#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
-#   }
-  
-#   # Generate missing data (Shi et al., 2020; EPM)
-#   Z <- rowSums(catDat[,c(paste0("X",1:6), paste0("M",1:6))])
-#   Z.rank <- rank(Z, ties.method = "first") # smaller Z values correspond to smaller Z.rank
-
-#   # Impose NA
-#   catDatMiss20 <- catDatMiss40 <- catDat
-#   catDatMiss20[Z.rank <= N*.2, paste0("Y",1:6)] <- NA
-#   catDatMiss40[Z.rank <= N*.4, paste0("Y",1:6)] <- NA
-  
-#   # Add repno
-#   catDat <- cbind(repno = repno, catDat)
-#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
-#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
-
-#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
-# }
-
-# MAR: Modified Chung & Cai (2019)
+# MAR: Shi et al. (2020)
 genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
   set.seed(seedused)
@@ -210,12 +132,10 @@ genData <- function (nCat, thDist, N, repno = 0, seed = NULL) {
   # Generate observed data on the indicators 
 
   # Population loading matrix
-  nItemPerFactor <- 6
-
-  lambda <- matrix(0, nrow = nItemPerFactor*3, ncol=3)
-  lambda[1:nItemPerFactor,1] <- factorLoading
-  lambda[(nItemPerFactor+1):(nItemPerFactor+nItemPerFactor),2] <- factorLoading
-  lambda[(nItemPerFactor*2+1):(nItemPerFactor*2+nItemPerFactor),3] <- factorLoading
+  lambda <- matrix(0, ncol=3, nrow = 6*3)
+  lambda[1:6,1] <- factorLoading
+  lambda[(6+1):(6+6),2] <- factorLoading
+  lambda[(6*2+1):(6*2+6),3] <- factorLoading
 
   # Population factor covariance matrix
   psi <- matrix(c(1,factorCorr,factorCorr,
@@ -228,65 +148,145 @@ genData <- function (nCat, thDist, N, repno = 0, seed = NULL) {
   diag(Sigma) <- 1
     
   # Generate data on the latent responses
-  contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*nItemPerFactor), Sigma = Sigma)
+  contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*6), Sigma = Sigma)
   contDat <- as.data.frame(contDat)
-  colnames(contDat) <- c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor), paste0("Y",1:nItemPerFactor))
+  colnames(contDat) <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
 
+  # Specify threshold values and proportion of missing data 
   if(nCat == 2) {
     if(thDist == "sym") {
-      Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+      p <- c(0, 0.5, 1) # diff(p) = .5, .5
+      Th <- qnorm(p, mean = 0, sd = 1) 
     } else if(thDist == "asym") {
-      Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+      p <- c(0, 0.85, 1) # diff(p) = .85, .15
+      Th <- qnorm(p, mean = 0, sd = 1) 
     }
   } else if(nCat == 5) {
     if(thDist == "sym") {
-      Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+      p <- c(0, 0.07, 0.31, 0.69, 0.93, 1) # diff(p) = .07 .24 .38 .24 .07
+      Th <- qnorm(p, mean = 0, sd = 1)
     } else if(thDist == "asym") {
-      Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+      p <- c(0, 0.52, 0.67, 0.80, 0.91, 1) # diff(p) = .52 .15 .13 .11 .09
+      Th <- qnorm(p, mean = 0, sd = 1) 
     }
   }
+  
+  # Generate categorical data
   catDat <- contDat
-  for (i in 1:(3*nItemPerFactor)){
+  for (i in 1:18){
     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
   }
-
-  # MAR: Similar to Chung & Cai (2019), but use proportion rather than percentile
-  # because percentile will not lead to 4 levels with equal size
   
-  # Proportion of missing data
-  propMiss20 <- c(.50, .20, .075, .025)
-  propMiss40 <- propMiss20*2
-
-  # Calculate the sum scores Z 
-  Z <- rowSums(catDat[,c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor))])
-  Z.rank <- rank(Z, ties.method="first") # smaller Z values correspond to smaller Z.rank
-
-  # Assign each propMiss to 25% of cases (or about 25% when N = 250, i.e., [62, 62, 63, 63])
-  # Lower sum scores correspond to more missing
-  indPropMiss20 <- sort(rep(rev(propMiss20), length.out = N), decreasing = TRUE)[Z.rank]
-  indPropMiss40 <- sort(rep(rev(propMiss40), length.out = N), decreasing = TRUE)[Z.rank]
-  
-  # Cases with missing
-  indMiss20 <- indPropMiss20 > runif(N, min = 0, max = 1)
-  indMiss40 <- indPropMiss40 > runif(N, min = 0, max = 1)
+  # Generate missing data (Shi et al., 2020; EPM)
+  Z <- rowSums(catDat[,c(paste0("X",1:6), paste0("M",1:6))])
+  Z.rank <- rank(Z, ties.method = "first") # smaller Z values correspond to smaller Z.rank
 
   # Impose NA
   catDatMiss20 <- catDatMiss40 <- catDat
-  catDatMiss20[indMiss20, paste0("Y",1:nItemPerFactor)] <- NA
-  catDatMiss40[indMiss40, paste0("Y",1:nItemPerFactor)] <- NA
-
+  catDatMiss20[Z.rank <= N*.2, paste0("Y",1:6)] <- NA
+  catDatMiss40[Z.rank <= N*.4, paste0("Y",1:6)] <- NA
+  
   # Add repno
   catDat <- cbind(repno = repno, catDat)
   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
 
-  # # Some correlations
-  # missimpact <- round(cor(cbind(data.frame(Z, Z.rank, indPropMiss20, indMiss20, indMiss40), 
-  #                         catDat[,paste0("Y",1:nItemPerFactor)])), 2)[,1:5]
-  # print(missimpact)
-
   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
 }
+
+# # MAR: Modified Chung & Cai (2019)
+# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
+#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
+#   set.seed(seedused)
+#   # Conditions
+#   nCat <- nCat # Number of categories: C2, C5
+#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
+#   N <- N # Sample size of the observed data: N = 250, 500, 1000
+
+#   # Factor loadings and factor correlations
+#   factorLoading <- 0.8
+#   factorCorr <- 0.4
+
+#   # Generate observed data on the indicators 
+
+#   # Population loading matrix
+#   nItemPerFactor <- 6
+
+#   lambda <- matrix(0, nrow = nItemPerFactor*3, ncol=3)
+#   lambda[1:nItemPerFactor,1] <- factorLoading
+#   lambda[(nItemPerFactor+1):(nItemPerFactor+nItemPerFactor),2] <- factorLoading
+#   lambda[(nItemPerFactor*2+1):(nItemPerFactor*2+nItemPerFactor),3] <- factorLoading
+
+#   # Population factor covariance matrix
+#   psi <- matrix(c(1,factorCorr,factorCorr,
+#                   factorCorr,1,factorCorr,
+#                   factorCorr,factorCorr,1),
+#                 nrow=3,ncol=3,byrow = TRUE)
+
+#   # Population covariance matrix of the latent responses of the ordinal items
+#   Sigma <- lambda %*% psi %*% t(lambda)
+#   diag(Sigma) <- 1
+    
+#   # Generate data on the latent responses
+#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*nItemPerFactor), Sigma = Sigma)
+#   contDat <- as.data.frame(contDat)
+#   colnames(contDat) <- c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor), paste0("Y",1:nItemPerFactor))
+
+#   if(nCat == 2) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
+#     }
+#   } else if(nCat == 5) {
+#     if(thDist == "sym") {
+#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
+#     } else if(thDist == "asym") {
+#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
+#     }
+#   }
+#   catDat <- contDat
+#   for (i in 1:(3*nItemPerFactor)){
+#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
+#   }
+
+#   # MAR: Similar to Chung & Cai (2019), but use proportion rather than percentile
+#   # because percentile will not lead to 4 levels with equal size
+  
+#   # Proportion of missing data
+#   propMiss20 <- c(.50, .20, .075, .025)
+#   propMiss40 <- propMiss20*2
+
+#   # Calculate the sum scores Z 
+#   Z <- rowSums(catDat[,c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor))])
+#   Z.rank <- rank(Z, ties.method="first") # smaller Z values correspond to smaller Z.rank
+
+#   # Assign each propMiss to 25% of cases (or about 25% when N = 250, i.e., [62, 62, 63, 63])
+#   # Lower sum scores correspond to more missing
+#   indPropMiss20 <- sort(rep(rev(propMiss20), length.out = N), decreasing = TRUE)[Z.rank]
+#   indPropMiss40 <- sort(rep(rev(propMiss40), length.out = N), decreasing = TRUE)[Z.rank]
+  
+#   # Cases with missing
+#   indMiss20 <- indPropMiss20 > runif(N, min = 0, max = 1)
+#   indMiss40 <- indPropMiss40 > runif(N, min = 0, max = 1)
+
+#   # Impose NA
+#   catDatMiss20 <- catDatMiss40 <- catDat
+#   catDatMiss20[indMiss20, paste0("Y",1:nItemPerFactor)] <- NA
+#   catDatMiss40[indMiss40, paste0("Y",1:nItemPerFactor)] <- NA
+
+#   # Add repno
+#   catDat <- cbind(repno = repno, catDat)
+#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
+#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
+
+#   # # Some correlations
+#   # missimpact <- round(cor(cbind(data.frame(Z, Z.rank, indPropMiss20, indMiss20, indMiss40), 
+#   #                         catDat[,paste0("Y",1:nItemPerFactor)])), 2)[,1:5]
+#   # print(missimpact)
+
+#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
+# }
 
 checkDat <- function(dat = NULL, nCat = NULL, comp = NULL, missvar = NULL) {
   check_nCat <- sapply(lapply(dat, unique), length)[-1] # exclude repno column
