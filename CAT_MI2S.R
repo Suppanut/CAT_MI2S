@@ -611,7 +611,7 @@ runMplusMI <- function(nCat = NULL, thDist = NULL, N = NULL, repno = NULL, propM
   # Create Mplus .inp file
   if (!is.null(savemaindir)) maindir <- savemaindir
   inp_full_path <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss, MI = TRUE, createdir = TRUE) # absolute path 
-  inp_full_path <- gsub(".dat",".inp",inp_full_path) # change .dat to .inp
+  inp_full_path <- gsub("_imp[0-9]+.dat",".inp",inp_full_path) # change .dat to .inp
   writeLines(syntax, inp_full_path) # write .inp file
 
   # Run Mplus via MplusAutomation (batch mode) 
