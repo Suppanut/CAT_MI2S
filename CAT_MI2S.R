@@ -672,7 +672,7 @@ anaImp <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) 
 
   # Fit H0
   out_full_path <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss, MI = TRUE, createdir = FALSE) # absolute path 
-  out_full_path <- sub("dat", "out", out_full_path)
+  out_full_path <- gsub("_imp[0-9]+.dat",".out",out_full_path)
 
   out <- MplusAutomation::readModels(out_full_path)
   impdat.list <- out$savedata
