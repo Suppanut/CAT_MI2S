@@ -426,12 +426,28 @@ CM3 <- '
   M ~~ 1*M + Y
   Y ~~ 1*Y'
 
-anaFIML <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est, sourcedir = NULL) {
+## Cont (fix first loading to be 1)
+# Model CM1: 3-factor CFA for X, M, Y with 6 items per factor
+CM1_cont <- '
+  X =~ X1 + X2 + X3 + X4 + X5 + X6
+  M =~ M1 + M2 + M3 + M4 + M5 + M6
+  Y =~ Y1 + Y2 + Y3 + Y4 + Y5 + Y6'
+
+# Model ICM1: X --> M --> Y
+ICM1_cont <- '
+  X =~ X1 + X2 + X3 + X4 + X5 + X6
+  M =~ M1 + M2 + M3 + M4 + M5 + M6
+  Y =~ Y1 + Y2 + Y3 + Y4 + Y5 + Y6
+  Y ~ M
+  M ~ X
+  Y ~ 0*X'
+
+anaFIMLcont_lavaan <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, sourcedir = NULL) {
   if (!is.null(sourcedir)) source(sourcedir)
   
   cont_items <- c(paste0("X",1:6), paste0("M",1:6), paste0("Y",1:6))
   
-  model <- get(anaModel) # CM1, ICM1, BM
+  model <- get(paste(anaModel,"cont",sep ="_")) # CM1, ICM1
 
   # Import data
   filename <- genPath(maindir, nCat, thDist, N, repno, propMiss)
@@ -441,29 +457,122 @@ anaFIML <- function(maindir, nCat, thDist, N, repno, propMiss = 0, anaModel, est
   # Analysis of complete data
   fit <- Catch(sem(model            = model,
                    data             = data,
-                   std.lv           = TRUE,
-                   estimator        = est,
+                   estimator        = "mlr",
                    missing          = "fiml"))
 
-  err_and_warn <- fit[2:3]
+  # fit is a list: 1) results from sem, 2) error msg, 3) warning msg
+  err_and_warn <- fit[2:3]    
   
   fit <- fit[[1]]
-  param <- try(lavaan::coef(fit), silent = TRUE)
+  paramEst <- parameterEstimates(fit, standardized = TRUE)
+  param <- paramEst$std.all # std.all
+  std.lv <- paramEst$std.lv # std.lv
+  unstd <- paramEst$est # unstd
+  se <- paramEst$se
+  names(param) <- names(unstd) <- names(se) <- names(std.lv) <- apply(paramEst[, c("lhs", "op", "rhs")], 1, function(x) paste(x, collapse = ""))
+  # To be consistent with cat
+  exclude <- !grepl("X~~X|M~~M|Y~~Y|X~1|M~1|Y~1", names(param))
+  param <- param[exclude]
+  std.lv <- std.lv[exclude]
+  unstd <- unstd[exclude]
+  se <- se[exclude]
+
   fitstat <- try(fitMeasures(fit), silent = TRUE)
-  nobs <- try(inspect(fit, "nobs"))
+  nobs <- inspect(fit, "nobs")
+    
+  conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, propMiss = propMiss,
+             anaModel = anaModel, est = "mlr")
 
-  conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, 
-             anaModel = anaModel, est = est)
-
-  RES <- list(conds     = conds,
-              param     = param, # should save std.all
-              fitstat   = fitstat,
-              nobs      = nobs,
-              err       = err_and_warn$err,
-              warn      = err_and_warn$warn)
-  RES
+  output <- list(conds     = conds,
+                 unstd     = unstd,
+                 se        = se,
+                 param     = param,
+                 std.lv    = std.lv,
+                 fitstat   = fitstat,
+                 nobs      = nobs,
+                 err       = err_and_warn$err,
+                 warn      = err_and_warn$warn)
+  return(output)
 }
 
+# mplus
+## fiml cont
+## fiml cat (no fit stats)
+## bayes cont (PPP + approx fit indices)
+## bayes cat (PPP)
+ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss, 
+                      EST = "bayes", ITEM = "cat",  missflag = 9, BSEED = NULL) {
+  suppressMessages(library(MplusAutomation))
+  if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
+
+  # Replace text in Mplus inp template
+  FILE <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss) # location of the .csv missing data file 
+  FILE <- paste0(dirname(FILE),"\n/",basename(FILE)) # seperate to multiple lines
+  syntax <- gsub("MISSING_DATA_FILE", FILE, inp_template_ana)
+  syntax <- gsub("ESTIMATOR_COMMAND", EST, syntax)
+  syntax <- gsub("MISSFLAG", missflag, syntax)
+  if (tolower(EST) == "bayes") {
+    syntax <- gsub("!BITERATIONS", "BITERATIONS", syntax)
+    syntax <- gsub("!CHAINS", "CHAINS", syntax)
+    syntax <- gsub("!BCONVERGENCE", "BCONVERGENCE", syntax)
+    syntax <- gsub("OUTPUT: ", "OUTPUT: TECH8 ", syntax)
+  }
+  if (tolower(ITEM) == "cat") {
+    syntax <- gsub("!categorical", "categorical", syntax)
+  }
+  if (!is.null(BSEED)) {
+    if (BSEED == "RANDOM") BSEED <- sample(1:99999999, 1)
+    syntax <- gsub("!BSEED = 0", paste0("BSEED = ", BSEED), syntax)
+  }
+  cat(writeLines(syntax))
+
+  # Create Mplus .inp file
+  inp_dir <- paste0(maindir,"/ana_mplus/",EST,ITEM,"/rep",repno)
+  if (!dir.exists(inp_dir)) dir.create(inp_dir, recursive=TRUE)
+  inp_basename <- sub("csv","inp",basename(FILE))
+  inp_full_path <- paste(inp_dir, inp_basename, sep = "/")
+  writeLines(syntax, inp_full_path) # write .inp file
+
+  # Run Mplus via MplusAutomation (batch mode) 
+  MplusAutomation::runModels(inp_full_path, logFile = NULL)
+
+  out_full_path <- sub("inp","out",inp_full_path)
+  out <- MplusAutomation::readModels(out_full_path)
+  return(out)
+}
+
+inp_template_ana <- 
+"DATA:
+file=
+'MISSING_DATA_FILE';
+
+VARIABLE:
+names = 
+repno
+X1 X2 X3 X4 X5 X6
+M1 M2 M3 M4 M5 M6
+Y1 Y2 Y3 Y4 Y5 Y6;
+usevariables =
+X1 X2 X3 X4 X5 X6
+M1 M2 M3 M4 M5 M6
+Y1 Y2 Y3 Y4 Y5 Y6;
+!categorical = X1-Y6;
+missing = ALL(MISSFLAG);
+
+! CM1
+MODEL:
+X BY X1-X6;
+M BY M1-M6;
+Y BY Y1-Y6;
+
+ANALYSIS:
+ESTIMATOR = ESTIMATOR_COMMAND;
+!BITERATIONS = 100001 (100000);
+!CHAINS = 2;
+!BSEED = 0;
+!BCONVERGENCE = .025;
+
+OUTPUT: STDYX PATTERNS TECH1;"
 
 inp_template <- 
 "DATA:
