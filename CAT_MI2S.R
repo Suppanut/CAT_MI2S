@@ -501,7 +501,7 @@ anaFIMLcont_lavaan <- function(maindir, nCat, thDist, N, repno, propMiss = 0, an
 ## bayes cont (PPP + approx fit indices)
 ## bayes cat (PPP)
 ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss, 
-                      EST = "bayes", ITEM = "cat",  std.lv = FALSE, missflag = 9, BSEED = NULL, sourcedir = sourcedir) {
+                      EST = "bayes", ITEM = "cat", std.lv = FALSE, suffix = NULL, missflag = 9, BSEED = NULL, sourcedir = sourcedir) {
   suppressMessages(library(MplusAutomation))
   if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
 
@@ -532,7 +532,7 @@ ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss,
   cat(writeLines(syntax))
 
   # Create Mplus .inp file
-  inp_dir <- paste0(maindir,"/ana_mplus/",EST,ITEM,"/rep",repno)
+  inp_dir <- paste0(maindir,"/ana_mplus/",EST,ITEM,suffix,"/rep",repno)
   if (!dir.exists(inp_dir)) dir.create(inp_dir, recursive=TRUE)
   inp_basename <- sub("csv","inp",basename(FILE))
   inp_full_path <- paste(inp_dir, inp_basename, sep = "/")
