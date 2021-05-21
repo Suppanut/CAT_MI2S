@@ -501,7 +501,7 @@ anaFIMLcont_lavaan <- function(maindir, nCat, thDist, N, repno, propMiss = 0, an
 ## bayes cont (PPP + approx fit indices)
 ## bayes cat (PPP)
 ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss, 
-                      EST = "bayes", ITEM = "cat", std.lv = FALSE, suffix = NULL, missflag = 9, BSEED = NULL, sourcedir = sourcedir) {
+                      EST = "bayes", ITEM = "cat", std.lv = FALSE, fullmed = FALSE, suffix = NULL, missflag = 9, BSEED = NULL, sourcedir = sourcedir) {
   suppressMessages(library(MplusAutomation))
   if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
 
@@ -521,6 +521,9 @@ ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss,
     syntax <- gsub("X BY X1-X6;", "X BY X1* X2-X6; X@1;", syntax)
     syntax <- gsub("M BY M1-M6;", "M BY M1* M2-M6; M@1;", syntax)
     syntax <- gsub("Y BY Y1-Y6;", "Y BY Y1* Y2-Y6; Y@1;", syntax)
+  }
+  if (isTRUE(fullmed)) {
+    syntax <- gsub("MODEL:\nY ON M; M ON X; Y ON X@0;", "MODEL:", syntax)
   }
   if (tolower(ITEM) == "cat") {
     syntax <- gsub("!categorical", "categorical", syntax)
