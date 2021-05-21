@@ -501,7 +501,7 @@ anaFIMLcont_lavaan <- function(maindir, nCat, thDist, N, repno, propMiss = 0, an
 ## bayes cont (PPP + approx fit indices)
 ## bayes cat (PPP)
 ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss, 
-                      EST = "bayes", ITEM = "cat",  missflag = 9, BSEED = NULL) {
+                      EST = "bayes", ITEM = "cat",  missflag = 9, BSEED = NULL, sourcedir = sourcedir) {
   suppressMessages(library(MplusAutomation))
   if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
 
