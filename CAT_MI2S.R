@@ -523,7 +523,7 @@ ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss,
     syntax <- gsub("Y BY Y1-Y6;", "Y BY Y1* Y2-Y6; Y@1;", syntax)
   }
   if (isTRUE(fullmed)) {
-    syntax <- gsub("MODEL:\nY ON M; M ON X; Y ON X@0;", "MODEL:", syntax)
+    syntax <- gsub("MODEL:", "MODEL:\nY ON M; M ON X; Y ON X@0;", syntax)
   }
   if (tolower(ITEM) == "cat") {
     syntax <- gsub("!categorical", "categorical", syntax)
