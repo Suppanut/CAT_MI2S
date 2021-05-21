@@ -506,7 +506,7 @@ ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss,
   if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
 
   # Replace text in Mplus inp template
-  FILE <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss) # location of the .csv missing data file 
+  FILE <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss) # location of the .csv data file 
   FILE <- paste0(dirname(FILE),"\n/",basename(FILE)) # seperate to multiple lines
   syntax <- gsub("MISSING_DATA_FILE", FILE, inp_template_ana)
   syntax <- gsub("ESTIMATOR_COMMAND", EST, syntax)
