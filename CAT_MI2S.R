@@ -501,7 +501,7 @@ anaFIMLcont_lavaan <- function(maindir, nCat, thDist, N, repno, propMiss = 0, an
 ## bayes cont (PPP + approx fit indices)
 ## bayes cat (PPP)
 ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss, 
-                      EST = "bayes", ITEM = "cat", std.lv = FALSE, fullmed = FALSE, suffix = NULL, missflag = 9, BSEED = NULL, sourcedir = sourcedir) {
+                      EST = "bayes", ITEM = "cat", std.lv = FALSE, saturated = FALSE, fullmed = FALSE, suffix = NULL, missflag = 9, BSEED = NULL, sourcedir = sourcedir) {
   suppressMessages(library(MplusAutomation))
   if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
 
@@ -516,6 +516,11 @@ ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss,
     syntax <- gsub("!CHAINS", "CHAINS", syntax)
     syntax <- gsub("!BCONVERGENCE", "BCONVERGENCE", syntax)
     syntax <- gsub("OUTPUT: ", "OUTPUT: TECH8 ", syntax)
+  }
+  if (isTRUE(saturated)) {
+    syntax <- gsub("X BY X1-X6;", "X1-Y6 WITH X1-Y6;", syntax)
+    syntax <- gsub("M BY M1-M6;", "", syntax)
+    syntax <- gsub("Y BY Y1-Y6;", "", syntax)
   }
   if (isTRUE(std.lv)) {
     syntax <- gsub("X BY X1-X6;", "X BY X1* X2-X6; X@1;", syntax)
