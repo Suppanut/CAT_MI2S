@@ -501,7 +501,7 @@ anaFIMLcont_lavaan <- function(maindir, nCat, thDist, N, repno, propMiss = 0, an
 ## bayes cont (PPP + approx fit indices)
 ## bayes cat (PPP)
 ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss, 
-                      EST = "bayes", ITEM = "cat", std.lv = FALSE, saturated = FALSE, fullmed = FALSE, suffix = NULL, missflag = 9, BSEED = NULL, sourcedir = sourcedir) {
+                      EST = "bayes", ITEM = "cat", std.lv = FALSE, fullmed = FALSE, suffix = NULL, missflag = 9, BSEED = NULL, sourcedir = sourcedir) {
   suppressMessages(library(MplusAutomation))
   if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
 
@@ -516,11 +516,6 @@ ana_mplus <- function(maindir, nCat, thDist, N, repno, propMiss,
     syntax <- gsub("!CHAINS", "CHAINS", syntax)
     syntax <- gsub("!BCONVERGENCE", "BCONVERGENCE", syntax)
     syntax <- gsub("OUTPUT: ", "OUTPUT: TECH8 ", syntax)
-  }
-  if (isTRUE(saturated)) {
-    syntax <- gsub("X BY X1-X6;", "X1-Y6 WITH X1-Y6;", syntax)
-    syntax <- gsub("M BY M1-M6;", "", syntax)
-    syntax <- gsub("Y BY Y1-Y6;", "", syntax)
   }
   if (isTRUE(std.lv)) {
     syntax <- gsub("X BY X1-X6;", "X BY X1* X2-X6; X@1;", syntax)
@@ -625,6 +620,51 @@ BCONVERGENCE = .025;
 
 OUTPUT: TECH8;"
 
+inp_template_h0 <- 
+"DATA:
+file=
+'MISSING_DATA_FILE';
+
+VARIABLE:
+names = 
+repno
+X1 X2 X3 X4 X5 X6
+M1 M2 M3 M4 M5 M6
+Y1 Y2 Y3 Y4 Y5 Y6;
+usevariables =
+X1 X2 X3 X4 X5 X6
+M1 M2 M3 M4 M5 M6
+Y1 Y2 Y3 Y4 Y5 Y6;
+categorical =
+X1 X2 X3 X4 X5 X6
+M1 M2 M3 M4 M5 M6
+Y1 Y2 Y3 Y4 Y5 Y6;
+AUXILIARY = repno;
+missing = ALL(MISSFLAG);
+
+DATA IMPUTATION:
+impute = (c) Y1 Y2 Y3 Y4 Y5 Y6;
+ndatasets = NIMP;
+save = SAVE_IMPUTED_DATA;
+FORMAT = F5.0;
+thin = BURNIN;
+
+ANALYSIS:
+TYPE = BAYES;
+BITERATIONS = 100000 (BURNIN);
+CHAINS = 2;
+!BSEED = 0;
+BCONVERGENCE = .025;
+
+MODEL:
+X BY X1* X2-X6; X@1;
+M BY M1* M2-X6; M@1;
+Y BY Y1* Y2-X6; Y@1;
+X WITH M Y;
+M WITH Y;
+
+OUTPUT: TECH8;"
+
 inp_template_convdiag <- 
 "DATA:
 file=
@@ -711,6 +751,7 @@ runMplusMI <- function(nCat = NULL, thDist = NULL, N = NULL, repno = NULL, propM
                        BSEED = NULL,
                        sourcedir = NULL,
                        convdiag = FALSE,
+                       h0 = FALSE,
                        savemaindir = NULL) {
   # Setup 
   suppressMessages(library(MplusAutomation))
@@ -720,6 +761,8 @@ runMplusMI <- function(nCat = NULL, thDist = NULL, N = NULL, repno = NULL, propM
     imptemp <- inp_template
   } else if (isTRUE(convdiag)) {
     imptemp <- inp_template_convdiag # Estimator = BAYES; MODEL: X1-Y6 WITH X1-Y6; PLOT: TYPE = PLOT2; 
+  } else if (isTRUE(h0)) {
+    imptemp <- inp_template_h0 # Estimator = BAYES; MODEL: "CM1";
   }
 
   # Replace text in Mplus imptemp
