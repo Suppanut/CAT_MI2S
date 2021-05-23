@@ -759,10 +759,9 @@ runMplusMI <- function(nCat = NULL, thDist = NULL, N = NULL, repno = NULL, propM
   
   if (isFALSE(convdiag)) {
     imptemp <- inp_template
+    if (isTRUE(h0)) imptemp <- inp_template_h0 # Estimator = BAYES; MODEL: "CM1";
   } else if (isTRUE(convdiag)) {
     imptemp <- inp_template_convdiag # Estimator = BAYES; MODEL: X1-Y6 WITH X1-Y6; PLOT: TYPE = PLOT2; 
-  } else if (isTRUE(h0)) {
-    imptemp <- inp_template_h0 # Estimator = BAYES; MODEL: "CM1";
   }
 
   # Replace text in Mplus imptemp
