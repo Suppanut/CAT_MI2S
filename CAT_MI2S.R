@@ -665,6 +665,47 @@ M WITH Y;
 
 OUTPUT: TECH8;"
 
+inp_template_h0_cov <- 
+"DATA:
+file=
+'MISSING_DATA_FILE';
+
+VARIABLE:
+names = 
+repno
+X1 X2 X3 X4 X5 X6
+M1 M2 M3 M4 M5 M6
+Y1 Y2 Y3 Y4 Y5 Y6;
+usevariables =
+X1 X2 X3 X4 X5 X6
+M1 M2 M3 M4 M5 M6
+Y1 Y2 Y3 Y4 Y5 Y6;
+categorical =
+X1 X2 X3 X4 X5 X6
+M1 M2 M3 M4 M5 M6
+Y1 Y2 Y3 Y4 Y5 Y6;
+AUXILIARY = repno;
+missing = ALL(MISSFLAG);
+
+DATA IMPUTATION:
+impute = (c) Y1 Y2 Y3 Y4 Y5 Y6;
+ndatasets = NIMP;
+save = SAVE_IMPUTED_DATA;
+FORMAT = F5.0;
+thin = BURNIN;
+
+ANALYSIS:
+ESTIMATOR = BAYES;
+BITERATIONS = 100000 (BURNIN);
+CHAINS = 2;
+!BSEED = 0;
+BCONVERGENCE = .025;
+
+MODEL:
+X1-Y6 WITH X1-Y6;
+
+OUTPUT: TECH8;"
+
 inp_template_convdiag <- 
 "DATA:
 file=
@@ -752,6 +793,7 @@ runMplusMI <- function(nCat = NULL, thDist = NULL, N = NULL, repno = NULL, propM
                        sourcedir = NULL,
                        convdiag = FALSE,
                        h0 = FALSE,
+                       h0_cov = FALSE,
                        savemaindir = NULL) {
   # Setup 
   suppressMessages(library(MplusAutomation))
@@ -760,6 +802,7 @@ runMplusMI <- function(nCat = NULL, thDist = NULL, N = NULL, repno = NULL, propM
   if (isFALSE(convdiag)) {
     imptemp <- inp_template
     if (isTRUE(h0)) imptemp <- inp_template_h0 # Estimator = BAYES; MODEL: "CM1";
+    if (isTRUE(h0_cov)) imptemp <- inp_template_h0_cov # Estimator = BAYES; MODEL: "Saturated";
   } else if (isTRUE(convdiag)) {
     imptemp <- inp_template_convdiag # Estimator = BAYES; MODEL: X1-Y6 WITH X1-Y6; PLOT: TYPE = PLOT2; 
   }
