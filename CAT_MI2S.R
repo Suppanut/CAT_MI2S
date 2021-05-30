@@ -1305,7 +1305,7 @@ getBias <- function(param.onerow, param.SE.onerow = NULL) {
        "bias.std"   = bias.std) 
 }
 
-extractResults <- function(RES, where) {
+extract_resImp <- function(RES, where) {
   where <- where
   cond_temp1 <- as.data.frame(t(sapply(RES, function(x) x$conds)), stringsAsFactors = FALSE)
   cond_temp2 <- as.data.frame(str_split(where, "_", simplify = TRUE), stringsAsFactors = FALSE) 
@@ -1317,25 +1317,52 @@ extractResults <- function(RES, where) {
   warn <- sapply(RES, function(x) ifelse(is.null(x[[where]]$warn), 0, 1))
 
   teststat <- t(sapply(RES, function(x) x[[where]]$teststat))
-  Full_teststat <- cbind(cond, err, warn, teststat)
+  lavfit <- t(sapply(RES, function(x) x[[where]]$fitstat[-4])) # remove df column (to avoid same name)
+  if(var(c(nrow(cond), length(err), length(warn), nrow(teststat), nrow(lavfit))) != 0) stop("unequal length")
+  Full_teststat <- cbind(cond, err, warn, teststat, lavfit)
 
   param.list <- lapply(RES, function(x) data.frame(rbind(x[[where]]$param), check.names = FALSE))
   Full_param <- data.table::rbindlist(param.list, fill = TRUE, use.names=TRUE) %>% relocate(any_of(sortParam))
+  if(var(c(nrow(cond), length(err), length(warn), nrow(Full_param))) != 0) stop("unequal length")
   Full_param <- cbind(cond, err, warn, Full_param)
 
   list(Full_param = Full_param, Full_teststat = Full_teststat)
 }
 
-## abs_max() is used to find max(|x|) and its corresponding name
+extract_resComp <- function(RES) {
+  cond <- as.data.frame(t(sapply(RES, function(x) x$conds)), stringsAsFactors = FALSE)
+  cond$estimator <- gsub("ulsmv", "uls", cond$est)
+  cond$estimator <- gsub("wlsmv", "dwls", cond$estimator)
+  cond$est <- NULL
+  cond$m <- 0
+  cond <- mutate(cond, across(c(nCat,N,repno,propMiss,m), as.numeric))
+  cond <- cond[c("nCat","thDist","N","repno","propMiss","anaModel","estimator","m")]
+  err <- sapply(RES, function(x) as.numeric(!is.null(x$err)))
+  warn <- sapply(RES, function(x) as.numeric(!is.null(x$warn)))
+  
+  teststat <- t(sapply(RES, function(x) x$teststat))
+  lavfit <- t(sapply(RES, function(x) x$fitstat[-4])) # remove df column (to avoid same name)
+  if(var(c(nrow(cond), length(err), length(warn), nrow(teststat), nrow(lavfit))) != 0) stop("unequal length")
+  Full_teststat <- data.frame(cond, err, warn, teststat, lavfit, stringsAsFactors = FALSE)
+  
+  param.list <- lapply(RES, function(x) data.frame(rbind(x$param), check.names = FALSE))
+  Full_param <- data.table::rbindlist(param.list, fill = TRUE, use.names=TRUE) %>% relocate(any_of(sortParam))
+  if(var(c(nrow(cond), length(err), length(warn), nrow(Full_param))) != 0) stop("unequal length")
+  Full_param <- data.frame(cond, err, warn, Full_param, stringsAsFactors = FALSE, check.names = FALSE)
+  
+  list(Full_param = Full_param, Full_teststat = Full_teststat)
+}
+
+## abs_max() is used to find max(|x|) (preserving the sign) and its corresponding name
 abs_max <- function(x) { 
     if( all(is.na(x)) ) {
        abs_max <- NA
        which_max <- NA
     } else {
-       abs_max <- max(abs(x), na.rm = TRUE)
-       which_max <- names(which.max(abs(x))) 
+       abs_max <- x[which.max(abs(x))]
+       which_max <- names(abs_max)
     }
-    data.frame(max = abs_max, which_max = which_max)
+    data.frame(max = as.numeric(abs_max), which_max = which_max)
 }
 
 ## A list containing functions (written in tidy-style), mean var min max nReps
