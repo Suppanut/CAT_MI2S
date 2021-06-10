@@ -194,100 +194,6 @@ genData <- function (nCat, thDist, N, repno = 0, seed = NULL) {
   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
 }
 
-# # MAR: Modified Chung & Cai (2019)
-# genData <- function (nCat, thDist, N, repno = 0, seed = NULL) { 
-#   if (is.null(seed)) seedused <- sample(1000:.Machine$integer.max, 1) else seedused <- seed
-#   set.seed(seedused)
-#   # Conditions
-#   nCat <- nCat # Number of categories: C2, C5
-#   thDist <- thDist # Threshold distributions: symmetric (sym), asymmetric (asym)
-#   N <- N # Sample size of the observed data: N = 250, 500, 1000
-
-#   # Factor loadings and factor correlations
-#   factorLoading <- 0.8
-#   factorCorr <- 0.4
-
-#   # Generate observed data on the indicators 
-
-#   # Population loading matrix
-#   nItemPerFactor <- 6
-
-#   lambda <- matrix(0, nrow = nItemPerFactor*3, ncol=3)
-#   lambda[1:nItemPerFactor,1] <- factorLoading
-#   lambda[(nItemPerFactor+1):(nItemPerFactor+nItemPerFactor),2] <- factorLoading
-#   lambda[(nItemPerFactor*2+1):(nItemPerFactor*2+nItemPerFactor),3] <- factorLoading
-
-#   # Population factor covariance matrix
-#   psi <- matrix(c(1,factorCorr,factorCorr,
-#                   factorCorr,1,factorCorr,
-#                   factorCorr,factorCorr,1),
-#                 nrow=3,ncol=3,byrow = TRUE)
-
-#   # Population covariance matrix of the latent responses of the ordinal items
-#   Sigma <- lambda %*% psi %*% t(lambda)
-#   diag(Sigma) <- 1
-    
-#   # Generate data on the latent responses
-#   contDat <- MASS::mvrnorm(n=N, mu = rep(0, 3*nItemPerFactor), Sigma = Sigma)
-#   contDat <- as.data.frame(contDat)
-#   colnames(contDat) <- c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor), paste0("Y",1:nItemPerFactor))
-
-#   if(nCat == 2) {
-#     if(thDist == "sym") {
-#       Th <- qnorm(c(0, 0.5, 1), mean = 0, sd = 1) # 50%,50%
-#     } else if(thDist == "asym") {
-#       Th <- qnorm(c(0, 0.85, 1), mean = 0, sd = 1) # 85%,15%
-#     }
-#   } else if(nCat == 5) {
-#     if(thDist == "sym") {
-#       Th <- qnorm(c(0, 0.07, 0.31, 0.69, 0.93, 1), mean = 0, sd = 1) # 7%,24%,38%,24%,7%
-#     } else if(thDist == "asym") {
-#       Th <- qnorm(c(0, 0.52, 0.67, 0.80, 0.91, 1), mean = 0, sd = 1) # 52%,15%,13%,11%,9%
-#     }
-#   }
-#   catDat <- contDat
-#   for (i in 1:(3*nItemPerFactor)){
-#     catDat[,i] <- as.numeric(as.character(cut(contDat[,i], Th, right=FALSE, labels=c(0:(nCat-1)))))
-#   }
-
-#   # MAR: Similar to Chung & Cai (2019), but use proportion rather than percentile
-#   # because percentile will not lead to 4 levels with equal size
-  
-#   # Proportion of missing data
-#   propMiss20 <- c(.50, .20, .075, .025)
-#   propMiss40 <- propMiss20*2
-
-#   # Calculate the sum scores Z 
-#   Z <- rowSums(catDat[,c(paste0("X",1:nItemPerFactor), paste0("M",1:nItemPerFactor))])
-#   Z.rank <- rank(Z, ties.method="first") # smaller Z values correspond to smaller Z.rank
-
-#   # Assign each propMiss to 25% of cases (or about 25% when N = 250, i.e., [62, 62, 63, 63])
-#   # Lower sum scores correspond to more missing
-#   indPropMiss20 <- sort(rep(rev(propMiss20), length.out = N), decreasing = TRUE)[Z.rank]
-#   indPropMiss40 <- sort(rep(rev(propMiss40), length.out = N), decreasing = TRUE)[Z.rank]
-  
-#   # Cases with missing
-#   indMiss20 <- indPropMiss20 > runif(N, min = 0, max = 1)
-#   indMiss40 <- indPropMiss40 > runif(N, min = 0, max = 1)
-
-#   # Impose NA
-#   catDatMiss20 <- catDatMiss40 <- catDat
-#   catDatMiss20[indMiss20, paste0("Y",1:nItemPerFactor)] <- NA
-#   catDatMiss40[indMiss40, paste0("Y",1:nItemPerFactor)] <- NA
-
-#   # Add repno
-#   catDat <- cbind(repno = repno, catDat)
-#   catDatMiss20 <- cbind(repno = repno, catDatMiss20)
-#   catDatMiss40 <- cbind(repno = repno, catDatMiss40)
-
-#   # # Some correlations
-#   # missimpact <- round(cor(cbind(data.frame(Z, Z.rank, indPropMiss20, indMiss20, indMiss40), 
-#   #                         catDat[,paste0("Y",1:nItemPerFactor)])), 2)[,1:5]
-#   # print(missimpact)
-
-#   list(comp = catDat, miss20 = catDatMiss20, miss40 = catDatMiss40, seed = seedused)
-# }
-
 checkDat <- function(dat = NULL, nCat = NULL, comp = NULL, missvar = NULL) {
   check_nCat <- sapply(lapply(dat, unique), length)[-1] # exclude repno column
   if (isTRUE(comp)) {
@@ -567,7 +473,6 @@ Y1 Y2 Y3 Y4 Y5 Y6;
 !categorical = X1-Y6;
 missing = ALL(MISSFLAG);
 
-! CM1
 MODEL:
 X BY X1-X6;
 M BY M1-M6;
@@ -605,7 +510,7 @@ AUXILIARY = repno;
 missing = ALL(MISSFLAG);
 
 DATA IMPUTATION:
-impute = (c) Y1 Y2 Y3 Y4 Y5 Y6;
+impute = (c) X1-Y6;
 ndatasets = NIMP;
 save = SAVE_IMPUTED_DATA;
 FORMAT = F5.0;
@@ -1200,11 +1105,18 @@ calculateT <- function(fit) {
   G <- lavaan::lavTech(fit, "gamma")[[1]]
   D <- lavaan:::computeDelta(lavmodel = fit@Model)[[1]]
   e <- matrix(c(residuals(fit)$th, lav_matrix_vech(residuals(fit)$cov, diag = FALSE)), ncol = 1)
+  error_G.inv <- 0
+  error_U <- 0
   G.inv <- try(solve(G), silent = TRUE)
-  if ("try-error" %in% class(G.inv)) G.inv <- MASS::ginv(G)
+  if ("try-error" %in% class(G.inv)) {
+    error_G.inv <- 1
+    G.inv <- MASS::ginv(G)
+  }
   U <- try(G.inv - (G.inv %*% D %*% solve(t(D) %*% G.inv %*% D) %*% t(D) %*% G.inv), silent = TRUE)
-  if ("try-error" %in% class(U)) U <- G.inv - (G.inv %*% D %*% MASS::ginv(t(D) %*% G.inv %*% D) %*% t(D) %*% G.inv)
-  # U <- G.inv - (G.inv %*% D %*% MASS::ginv(t(D) %*% G.inv %*% D) %*% t(D) %*% G.inv)
+  if ("try-error" %in% class(U)) {
+    error_U <- 1
+    U <- G.inv - (G.inv %*% D %*% MASS::ginv(t(D) %*% G.inv %*% D) %*% t(D) %*% G.inv)
+  }
   TB <- as.numeric(N * (t(e) %*% U %*% e))
   TYB <- TB/(1+N*TB/(N-1)^2) # (see Yuan & Bentler, 1998, eq. 7)
 
@@ -1221,11 +1133,13 @@ calculateT <- function(fit) {
   b <- df - a * UG.tr
   TMV <- a*T+b
   output <- c("T" = T, "df" = df,
-            "TM" = TM, "pvalue.TM" = 1-pchisq(TM,df),
-            "TMV" = TMV, "pvalue.TMV" = 1-pchisq(TMV,df),
-            "TB" = TB, "pvalue.TB" = 1-pchisq(TB,df),
-            "TYB" = TYB, "pvalue.TYB" = 1-pchisq(TYB,df),
-            "a" = a, "b" = b, "c" = c)
+              "TM" = TM, "pvalue.TM" = 1-pchisq(TM,df),
+              "TMV" = TMV, "pvalue.TMV" = 1-pchisq(TMV,df),
+              "TB" = TB, "pvalue.TB" = 1-pchisq(TB,df),
+              "TYB" = TYB, "pvalue.TYB" = 1-pchisq(TYB,df),
+              "a" = a, "b" = b, "c" = c,
+              "error_G.inv" = error_G.inv,
+              "error_U" = error_U)
   return(output)
 }
 
@@ -1239,7 +1153,6 @@ cfitli <- function(T, df, TI, dfI) {
   tli <- 1 - ((T - df) * dfI) / ((TI - dfI) * df)
   c(cfi = cfi, tli = tli)
 }
-
 
 ## getBias()
 getBias <- function(param.onerow, param.SE.onerow = NULL) {
