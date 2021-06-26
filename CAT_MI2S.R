@@ -1218,7 +1218,31 @@ getBias <- function(param.onerow, param.SE.onerow = NULL) {
        "bias.std"   = bias.std) 
 }
 
-extract_resImp <- function(RES, where) {
+# extract_resImp <- function(RES, where) {
+#   where <- where
+#   cond_temp1 <- as.data.frame(t(sapply(RES, function(x) x$conds)), stringsAsFactors = FALSE)
+#   cond_temp2 <- as.data.frame(str_split(where, "_", simplify = TRUE), stringsAsFactors = FALSE) 
+#   colnames(cond_temp2) <- c("anaModel","estimator","m")
+#   cond_temp2$m <- gsub("m", "",cond_temp2$m)
+#   cond <- bind_cols(cond_temp1, cond_temp2)
+#   cond <- mutate(cond, across(c(nCat,N,repno,propMiss,m), as.numeric))
+#   err <- sapply(RES, function(x) ifelse(is.null(x[[where]]$err), 0, 1))
+#   warn <- sapply(RES, function(x) ifelse(is.null(x[[where]]$warn), 0, 1))
+
+#   teststat <- t(sapply(RES, function(x) x[[where]]$teststat))
+#   lavfit <- t(sapply(RES, function(x) x[[where]]$fitstat[-4])) # remove df column (to avoid same name)
+#   if(var(c(nrow(cond), length(err), length(warn), nrow(teststat), nrow(lavfit))) != 0) stop("unequal length")
+#   Full_teststat <- cbind(cond, err, warn, teststat, lavfit)
+
+#   param.list <- lapply(RES, function(x) data.frame(rbind(x[[where]]$param), check.names = FALSE))
+#   Full_param <- data.table::rbindlist(param.list, fill = TRUE, use.names=TRUE) %>% relocate(any_of(sortParam))
+#   if(var(c(nrow(cond), length(err), length(warn), nrow(Full_param))) != 0) stop("unequal length")
+#   Full_param <- cbind(cond, err, warn, Full_param)
+
+#   list(Full_param = Full_param, Full_teststat = Full_teststat)
+# }
+
+extract_resImp_afi <- function(RES, where, mc.cores = 2L, afi = TRUE, selcol = NULL) {
   where <- where
   cond_temp1 <- as.data.frame(t(sapply(RES, function(x) x$conds)), stringsAsFactors = FALSE)
   cond_temp2 <- as.data.frame(str_split(where, "_", simplify = TRUE), stringsAsFactors = FALSE) 
@@ -1234,15 +1258,73 @@ extract_resImp <- function(RES, where) {
   if(var(c(nrow(cond), length(err), length(warn), nrow(teststat), nrow(lavfit))) != 0) stop("unequal length")
   Full_teststat <- cbind(cond, err, warn, teststat, lavfit)
 
-  param.list <- lapply(RES, function(x) data.frame(rbind(x[[where]]$param), check.names = FALSE))
+  param.list <- parallel::mclapply(RES, function(x) data.frame(rbind(x[[where]]$param), check.names = FALSE), mc.cores = mc.cores)
   Full_param <- data.table::rbindlist(param.list, fill = TRUE, use.names=TRUE) %>% relocate(any_of(sortParam))
   if(var(c(nrow(cond), length(err), length(warn), nrow(Full_param))) != 0) stop("unequal length")
   Full_param <- cbind(cond, err, warn, Full_param)
+  
+  if(isTRUE(afi)) {
+    where_BM <- sub("I?CM1","BM",where)
+    teststat_BM <- t(sapply(RES, function(x) x[[where_BM]]$teststat))
+    colnames(teststat_BM) <- paste0(colnames(teststat_BM),"_BM")
+    if(nrow(Full_teststat) != nrow(teststat_BM)) stop("nrow(Full_teststat) != nrow(teststat_BM)")
 
+    Full_teststat <- data.frame(Full_teststat, teststat_BM) %>% 
+      mutate(TB = ifelse(TB < 0,0,TB),
+
+             rmsea.TM  = sqrt(pmax(TM -df,0)/(df*(N-1))),
+             rmsea.TMV = sqrt(pmax(TMV-df,0)/(df*(N-1))),
+             rmsea.TB  = sqrt(pmax(TB -df,0)/(df*(N-1))),
+             rmsea.TYB = sqrt(pmax(TYB-df,0)/(df*(N-1))),
+
+             cfi.TM  = 1 - pmax(TM -df,0)/pmax(TM_BM -df_BM,0),
+             cfi.TMV = 1 - pmax(TMV-df,0)/pmax(TMV_BM-df_BM,0),
+             cfi.TB  = 1 - pmax(TB -df,0)/pmax(TB_BM -df_BM,0),
+             cfi.TYB = 1 - pmax(TYB-df,0)/pmax(TYB_BM-df_BM,0),
+
+             tli.TM = 1 - ((pmax(TM,0)-df)*df_BM)/((pmax(TM_BM,0)-df_BM)*df),
+             tli.TMV = 1 - ((pmax(TMV,0)-df)*df_BM)/((pmax(TMV_BM,0)-df_BM)*df),
+             tli.TB = 1 - ((pmax(TB,0)-df)*df_BM)/((pmax(TB_BM,0)-df_BM)*df),
+             tli.TYB = 1 - ((pmax(TYB,0)-df)*df_BM)/((pmax(TYB_BM,0)-df_BM)*df)
+             )
+  }
+  if(is.null(selcol)) {
+    selcol <- c("nCat","thDist","N","repno","propMiss","anaModel","estimator","m","err","warn",
+                "T","df","TM","pvalue.TM","TMV","pvalue.TMV","TB","pvalue.TB","TYB","pvalue.TYB","a","b","c","error_G.inv","error_U",
+                "TM_BM","TMV_BM","TB_BM","TYB_BM","df_BM",
+                "npar","fmin","chisq","chisq.scaled","df.scaled","pvalue.scaled","cfi.scaled","tli.scaled","rmsea.scaled",
+                "rmsea.TM","rmsea.TMV","rmsea.TB","rmsea.TYB","cfi.TM","cfi.TMV","cfi.TB","cfi.TYB","tli.TM","tli.TMV","tli.TB","tli.TYB")
+  }
+  Full_teststat <- Full_teststat %>% select(any_of(selcol))
   list(Full_param = Full_param, Full_teststat = Full_teststat)
 }
 
-extract_resComp <- function(RES) {
+
+# extract_resComp <- function(RES) {
+#   cond <- as.data.frame(t(sapply(RES, function(x) x$conds)), stringsAsFactors = FALSE)
+#   cond$estimator <- gsub("ulsmv", "uls", cond$est)
+#   cond$estimator <- gsub("wlsmv", "dwls", cond$estimator)
+#   cond$est <- NULL
+#   cond$m <- 0
+#   cond <- mutate(cond, across(c(nCat,N,repno,propMiss,m), as.numeric))
+#   cond <- cond[c("nCat","thDist","N","repno","propMiss","anaModel","estimator","m")]
+#   err <- sapply(RES, function(x) as.numeric(!is.null(x$err)))
+#   warn <- sapply(RES, function(x) as.numeric(!is.null(x$warn)))
+  
+#   teststat <- t(sapply(RES, function(x) x$teststat[1:13])) # ignore least 2 columns from new analysis (error columns)
+#   lavfit <- t(sapply(RES, function(x) x$fitstat[-4])) # remove df column (to avoid same name)
+#   if(var(c(nrow(cond), length(err), length(warn), nrow(teststat), nrow(lavfit))) != 0) stop("unequal length")
+#   Full_teststat <- data.frame(cond, err, warn, teststat, lavfit, stringsAsFactors = FALSE)
+  
+#   param.list <- lapply(RES, function(x) data.frame(rbind(x$param), check.names = FALSE))
+#   Full_param <- data.table::rbindlist(param.list, fill = TRUE, use.names=TRUE) %>% relocate(any_of(sortParam))
+#   if(var(c(nrow(cond), length(err), length(warn), nrow(Full_param))) != 0) stop("unequal length")
+#   Full_param <- data.frame(cond, err, warn, Full_param, stringsAsFactors = FALSE, check.names = FALSE)
+  
+#   list(Full_param = Full_param, Full_teststat = Full_teststat)
+# }
+
+extract_resComp_afi <- function(RES, mc.cores = 2L, afi = TRUE, selcol = NULL) {
   cond <- as.data.frame(t(sapply(RES, function(x) x$conds)), stringsAsFactors = FALSE)
   cond$estimator <- gsub("ulsmv", "uls", cond$est)
   cond$estimator <- gsub("wlsmv", "dwls", cond$estimator)
@@ -1253,16 +1335,73 @@ extract_resComp <- function(RES) {
   err <- sapply(RES, function(x) as.numeric(!is.null(x$err)))
   warn <- sapply(RES, function(x) as.numeric(!is.null(x$warn)))
   
-  teststat <- t(sapply(RES, function(x) x$teststat))
+  teststat <- t(sapply(RES, function(x) x$teststat[1:13])) # ignore least 2 columns from new analysis (error columns)
   lavfit <- t(sapply(RES, function(x) x$fitstat[-4])) # remove df column (to avoid same name)
   if(var(c(nrow(cond), length(err), length(warn), nrow(teststat), nrow(lavfit))) != 0) stop("unequal length")
   Full_teststat <- data.frame(cond, err, warn, teststat, lavfit, stringsAsFactors = FALSE)
   
-  param.list <- lapply(RES, function(x) data.frame(rbind(x$param), check.names = FALSE))
+  param.list <- parallel::mclapply(RES, function(x) data.frame(rbind(x$param), check.names = FALSE), mc.cores = mc.cores)
   Full_param <- data.table::rbindlist(param.list, fill = TRUE, use.names=TRUE) %>% relocate(any_of(sortParam))
   if(var(c(nrow(cond), length(err), length(warn), nrow(Full_param))) != 0) stop("unequal length")
-  Full_param <- data.frame(cond, err, warn, Full_param, stringsAsFactors = FALSE, check.names = FALSE)
-  
+  Full_param <- data.frame(cond, err, warn, Full_param, stringsAsFactors = FALSE, check.names = FALSE) 
+
+  if(isTRUE(afi)) {
+    Full_teststat_CM1 <- Full_teststat %>% filter(anaModel == "CM1")
+    Full_teststat_ICM1 <- Full_teststat %>% filter(anaModel == "ICM1")
+    Full_teststat_BM <- Full_teststat %>% filter(anaModel == "BM")
+    colnames(Full_teststat_BM) <- paste0(colnames(Full_teststat_BM),"_BM")
+    if(nrow(Full_teststat_CM1) != nrow(Full_teststat_BM)) stop("nnrow(Full_teststat_CM1) != nrow(Full_teststat_BM)")
+    if(nrow(Full_teststat_ICM1) != nrow(Full_teststat_BM)) stop("nnrow(Full_teststat_ICM1) != nrow(Full_teststat_BM)")
+
+    Full_teststat_CM1 <- data.frame(Full_teststat_CM1, Full_teststat_BM) %>% 
+      mutate(TB = ifelse(TB < 0,0,TB),
+
+             rmsea.TM  = sqrt(pmax(TM -df,0)/(df*(N-1))),
+             rmsea.TMV = sqrt(pmax(TMV-df,0)/(df*(N-1))),
+             rmsea.TB  = sqrt(pmax(TB -df,0)/(df*(N-1))),
+             rmsea.TYB = sqrt(pmax(TYB-df,0)/(df*(N-1))),
+
+             cfi.TM  = 1 - pmax(TM -df,0)/pmax(TM_BM -df_BM,0),
+             cfi.TMV = 1 - pmax(TMV-df,0)/pmax(TMV_BM-df_BM,0),
+             cfi.TB  = 1 - pmax(TB -df,0)/pmax(TB_BM -df_BM,0),
+             cfi.TYB = 1 - pmax(TYB-df,0)/pmax(TYB_BM-df_BM,0),
+
+             tli.TM = 1 - ((pmax(TM,0)-df)*df_BM)/((pmax(TM_BM,0)-df_BM)*df),
+             tli.TMV = 1 - ((pmax(TMV,0)-df)*df_BM)/((pmax(TMV_BM,0)-df_BM)*df),
+             tli.TB = 1 - ((pmax(TB,0)-df)*df_BM)/((pmax(TB_BM,0)-df_BM)*df),
+             tli.TYB = 1 - ((pmax(TYB,0)-df)*df_BM)/((pmax(TYB_BM,0)-df_BM)*df)
+             )
+    Full_teststat_ICM1 <- data.frame(Full_teststat_ICM1, Full_teststat_BM) %>% 
+      mutate(TB = ifelse(TB < 0,0,TB),
+
+             rmsea.TM  = sqrt(pmax(TM -df,0)/(df*(N-1))),
+             rmsea.TMV = sqrt(pmax(TMV-df,0)/(df*(N-1))),
+             rmsea.TB  = sqrt(pmax(TB -df,0)/(df*(N-1))),
+             rmsea.TYB = sqrt(pmax(TYB-df,0)/(df*(N-1))),
+
+             cfi.TM  = 1 - pmax(TM -df,0)/pmax(TM_BM -df_BM,0),
+             cfi.TMV = 1 - pmax(TMV-df,0)/pmax(TMV_BM-df_BM,0),
+             cfi.TB  = 1 - pmax(TB -df,0)/pmax(TB_BM -df_BM,0),
+             cfi.TYB = 1 - pmax(TYB-df,0)/pmax(TYB_BM-df_BM,0),
+
+             tli.TM = 1 - ((pmax(TM,0)-df)*df_BM)/((pmax(TM_BM,0)-df_BM)*df),
+             tli.TMV = 1 - ((pmax(TMV,0)-df)*df_BM)/((pmax(TMV_BM,0)-df_BM)*df),
+             tli.TB = 1 - ((pmax(TB,0)-df)*df_BM)/((pmax(TB_BM,0)-df_BM)*df),
+             tli.TYB = 1 - ((pmax(TYB,0)-df)*df_BM)/((pmax(TYB_BM,0)-df_BM)*df)
+             )
+
+    Full_teststat <- bind_rows(Full_teststat_CM1,Full_teststat_ICM1)
+  }
+  if(is.null(selcol)) {
+    selcol <- c("nCat","thDist","N","repno","propMiss","anaModel","estimator","m","err","warn",
+                "T","df","TM","pvalue.TM","TMV","pvalue.TMV","TB","pvalue.TB","TYB","pvalue.TYB","a","b","c","error_G.inv","error_U",
+                "TM_BM","TMV_BM","TB_BM","TYB_BM","df_BM",
+                "npar","fmin","chisq","chisq.scaled","df.scaled","pvalue.scaled","cfi.scaled","tli.scaled","rmsea.scaled",
+                "rmsea.TM","rmsea.TMV","rmsea.TB","rmsea.TYB","cfi.TM","cfi.TMV","cfi.TB","cfi.TYB","tli.TM","tli.TMV","tli.TB","tli.TYB")
+  }
+  Full_teststat <- Full_teststat %>% select(any_of(selcol)) %>% filter(anaModel != "BM")
+  Full_param <- Full_param %>% filter(anaModel != "BM")
+
   list(Full_param = Full_param, Full_teststat = Full_teststat)
 }
 
