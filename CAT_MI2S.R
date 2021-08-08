@@ -914,134 +914,88 @@ fitH1 <- function(lavCor.list, impno, anaModel, estimator, cat_items) {
   return(output)
 }
 
-anaImp_CM2 <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) {
+# anaImp_CM2 <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) {
   
-  if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
+#   if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
 
-  # Fit H0
-  out_full_path <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss, MI = TRUE, createdir = FALSE) # absolute path 
-  out_full_path <- sub("dat", "out", out_full_path)
+#   # Fit H0
+#   out_full_path <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss, MI = TRUE, createdir = FALSE) # absolute path 
+#   out_full_path <- sub("dat", "out", out_full_path)
 
-  out <- MplusAutomation::readModels(out_full_path)
-  impdat.list <- out$savedata
-  impdat.list <- impdat.list[stringr::str_order(names(impdat.list), numeric = TRUE)] # sort imp1, imp2, .. NOT imp1, imp10, ..
+#   out <- MplusAutomation::readModels(out_full_path)
+#   impdat.list <- out$savedata
+#   impdat.list <- impdat.list[stringr::str_order(names(impdat.list), numeric = TRUE)] # sort imp1, imp2, .. NOT imp1, imp10, ..
   
-  cat_items <- c(paste0("X",1:5), paste0("M",1:5), paste0("Y",1:5)) # 5 items per factor
+#   cat_items <- c(paste0("X",1:5), paste0("M",1:5), paste0("Y",1:5)) # 5 items per factor
 
-  lavCor.list <- lapply(impdat.list, function(x) {
-    Catch(lavCor(x[,cat_items], ordered=cat_items, output="full", se = "standard", baseline = FALSE))
-  })
+#   lavCor.list <- lapply(impdat.list, function(x) {
+#     Catch(lavCor(x[,cat_items], ordered=cat_items, output="full", se = "standard", baseline = FALSE))
+#   })
 
-  err.list <- lapply(lavCor.list, "[[", "err")
-  warn.list <- lapply(lavCor.list, "[[", "warn")
-  lavCor.list <- lapply(lavCor.list, "[[", "res")
+#   err.list <- lapply(lavCor.list, "[[", "err")
+#   warn.list <- lapply(lavCor.list, "[[", "warn")
+#   lavCor.list <- lapply(lavCor.list, "[[", "res")
 
-  # Fit H1
-  # Correct model
-  fitH1_CM2_uls_m20   <- fitH1(lavCor.list, impno =  1:20,  anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
-  fitH1_CM2_uls_m50   <- fitH1(lavCor.list, impno = 21:70,  anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
-  fitH1_CM2_uls_m100  <- fitH1(lavCor.list, impno = 71:170, anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
-  fitH1_CM2_uls_m300  <- fitH1(lavCor.list, impno =  1:300, anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
+#   # Fit H1
+#   # Correct model
+#   fitH1_CM2_uls_m20   <- fitH1(lavCor.list, impno =  1:20,  anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
+#   fitH1_CM2_uls_m50   <- fitH1(lavCor.list, impno = 21:70,  anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
+#   fitH1_CM2_uls_m100  <- fitH1(lavCor.list, impno = 71:170, anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
+#   fitH1_CM2_uls_m300  <- fitH1(lavCor.list, impno =  1:300, anaModel = "CM2", estimator = "ulsmv", cat_items = cat_items)
 
-  conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, propMiss = propMiss)
+#   conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, propMiss = propMiss)
   
-  # OUTPUT
-  RES <- list(conds          = conds,
-              CM2_uls_m20    = fitH1_CM2_uls_m20,
-              CM2_uls_m50    = fitH1_CM2_uls_m50,
-              CM2_uls_m100   = fitH1_CM2_uls_m100,
-              CM2_uls_m300   = fitH1_CM2_uls_m300,
-              err.list       = err.list,
-              warn.list      = warn.list)
-  RES
-}
-
-anaImp_CM3 <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) {
-  
-  if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
-
-  # Fit H0
-  out_full_path <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss, MI = TRUE, createdir = FALSE) # absolute path 
-  out_full_path <- sub("dat", "out", out_full_path)
-
-  out <- MplusAutomation::readModels(out_full_path)
-  impdat.list <- out$savedata
-  impdat.list <- impdat.list[stringr::str_order(names(impdat.list), numeric = TRUE)] # sort imp1, imp2, .. NOT imp1, imp10, ..
-  
-  cat_items <- c(paste0("X",1:3), paste0("M",1:3), paste0("Y",1:3)) # 3 items per factor
-
-  lavCor.list <- lapply(impdat.list, function(x) {
-    Catch(lavCor(x[,cat_items], ordered=cat_items, output="full", se = "standard", baseline = FALSE))
-  })
-
-  err.list <- lapply(lavCor.list, "[[", "err")
-  warn.list <- lapply(lavCor.list, "[[", "warn")
-  lavCor.list <- lapply(lavCor.list, "[[", "res")
-
-  # Fit H1
-  # Correct model
-  fitH1_CM3_uls_m20   <- fitH1(lavCor.list, impno =  1:20,  anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
-  fitH1_CM3_uls_m50   <- fitH1(lavCor.list, impno = 21:70,  anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
-  fitH1_CM3_uls_m100  <- fitH1(lavCor.list, impno = 71:170, anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
-  fitH1_CM3_uls_m300  <- fitH1(lavCor.list, impno =  1:300, anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
-
-  conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, propMiss = propMiss)
-  
-  # OUTPUT
-  RES <- list(conds          = conds,
-              CM3_uls_m20    = fitH1_CM3_uls_m20,
-              CM3_uls_m50    = fitH1_CM3_uls_m50,
-              CM3_uls_m100   = fitH1_CM3_uls_m100,
-              CM3_uls_m300   = fitH1_CM3_uls_m300,
-              err.list       = err.list,
-              warn.list      = warn.list)
-  RES
-}
-
-
-# pool_ChungCai2019 <- function(pcorr.list, threshold.list, th.idx, acov.list, N) {
-#   # Chung & Cai (2019, Eqs. 19, 21, 22)
-#   # Note: lavaan requires thresholds
-  
-#   m <- length(pcorr.list) # number of imputed datasets
-#   # Average polychoric correlation matrix
-#   pcorr.avg <- Reduce('+', pcorr.list)/length(pcorr.list)
-#   pcorr.avg.vec <- lavaan::lav_matrix_vech(pcorr.avg, diagonal = FALSE)
-
-#   # Average threshold matrix
-#   threshold.avg <- Reduce('+', threshold.list)/length(threshold.list)
-#   threshold.avg <- as.numeric(threshold.avg) 
-#   attr(threshold.avg, "th.idx") <- th.idx # add attribute to thresholds
-
-#   samstat.avg <- c(threshold.avg, pcorr.avg.vec) # Average thresholds and non-redundant correlations
-
-#   # Between-imputation variance of the thresholds and the polychoric correlation matrix
-#   samstat.list <- mapply(FUN = function(x,y) {
-#     c(x,lavaan::lav_matrix_vech(y, diagonal = FALSE))
-#   }, threshold.list, pcorr.list, SIMPLIFY=FALSE)
-#   acov.between.list <- lapply(samstat.list, function(x) (x-samstat.avg) %*% t(x-samstat.avg))
-#   acov.between <- Reduce('+', acov.between.list)/(m-1)
-
-#   # Within-imputation asymptotic covariance matrix of the thresholds and the polychoric correlation matrix
-#   acov.within <- Reduce('+', acov.list)/length(acov.list)
-#   # CHECK: sort - thresholds come first
-#   thr.where <- grepl("\\|",colnames(acov.within)) 
-#   sort.acov.within <- c(which(thr.where), which(!thr.where))
-#   acov.within <- acov.within[sort.acov.within, sort.acov.within]
-
-#   # Corrected variance-covariance matrix of the thresholds and the polychoric correlation matrix 
-#   acov.total <- acov.within + acov.between + acov.between/m
-  
-#   # lavaan uses nacov as input
-#   nacov.total <- (N-1)*acov.total
-
 #   # OUTPUT
-#   OUTPUT <- list(nacov.total    = nacov.total,
-#                  pcorr.avg      = pcorr.avg,
-#                  threshold.avg  = threshold.avg,
-#                  m              = m,
-#                  N              = N)
-#   OUTPUT
+#   RES <- list(conds          = conds,
+#               CM2_uls_m20    = fitH1_CM2_uls_m20,
+#               CM2_uls_m50    = fitH1_CM2_uls_m50,
+#               CM2_uls_m100   = fitH1_CM2_uls_m100,
+#               CM2_uls_m300   = fitH1_CM2_uls_m300,
+#               err.list       = err.list,
+#               warn.list      = warn.list)
+#   RES
+# }
+
+# anaImp_CM3 <- function(maindir, nCat, thDist, N, repno, propMiss, sourcedir = NULL) {
+  
+#   if(!is.null(sourcedir)) source(sourcedir) # load R objects and functions
+
+#   # Fit H0
+#   out_full_path <- genPath(maindir = maindir, nCat, thDist, N, repno, propMiss, MI = TRUE, createdir = FALSE) # absolute path 
+#   out_full_path <- sub("dat", "out", out_full_path)
+
+#   out <- MplusAutomation::readModels(out_full_path)
+#   impdat.list <- out$savedata
+#   impdat.list <- impdat.list[stringr::str_order(names(impdat.list), numeric = TRUE)] # sort imp1, imp2, .. NOT imp1, imp10, ..
+  
+#   cat_items <- c(paste0("X",1:3), paste0("M",1:3), paste0("Y",1:3)) # 3 items per factor
+
+#   lavCor.list <- lapply(impdat.list, function(x) {
+#     Catch(lavCor(x[,cat_items], ordered=cat_items, output="full", se = "standard", baseline = FALSE))
+#   })
+
+#   err.list <- lapply(lavCor.list, "[[", "err")
+#   warn.list <- lapply(lavCor.list, "[[", "warn")
+#   lavCor.list <- lapply(lavCor.list, "[[", "res")
+
+#   # Fit H1
+#   # Correct model
+#   fitH1_CM3_uls_m20   <- fitH1(lavCor.list, impno =  1:20,  anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
+#   fitH1_CM3_uls_m50   <- fitH1(lavCor.list, impno = 21:70,  anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
+#   fitH1_CM3_uls_m100  <- fitH1(lavCor.list, impno = 71:170, anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
+#   fitH1_CM3_uls_m300  <- fitH1(lavCor.list, impno =  1:300, anaModel = "CM3", estimator = "ulsmv", cat_items = cat_items)
+
+#   conds <- c(nCat = nCat, thDist = thDist, N = N, repno = repno, propMiss = propMiss)
+  
+#   # OUTPUT
+#   RES <- list(conds          = conds,
+#               CM3_uls_m20    = fitH1_CM3_uls_m20,
+#               CM3_uls_m50    = fitH1_CM3_uls_m50,
+#               CM3_uls_m100   = fitH1_CM3_uls_m100,
+#               CM3_uls_m300   = fitH1_CM3_uls_m300,
+#               err.list       = err.list,
+#               warn.list      = warn.list)
+#   RES
 # }
 
 pool_ChungCai2019 <- function(lavCor.list, impno = NULL) {
